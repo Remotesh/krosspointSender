@@ -5,7 +5,7 @@
  */
 import type { DeviceProfile, TransferMethod, TransferProgress, TransferState } from '../types';
 import { TransferError } from '../types';
-import { explainBlock, getHelperTransport, getTransport } from '../transports';
+import { downloadBlob, explainBlock, getHelperTransport, getTransport } from '../transports';
 import { saveProfile } from '../deviceProfiles';
 import { sendTestEpub } from '../epub';
 import { errorMessage, field, formatBytes, h, replace } from './dom';
@@ -14,6 +14,17 @@ import { exportCurrent } from './outputPanel';
 import { hasOutput, store } from './state';
 import { recordPackSend } from './packOutput';
 import { toast } from './toast';
+
+/**
+ * Save this page as one HTML file. The app is a single self-contained file,
+ * so the saved copy is the whole app. Opened from disk (file://), a browser
+ * does not apply the https mixed-content rule, and the LAN upload works.
+ */
+function saveOfflineCopy(): void {
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  downloadBlob(new Blob([html], { type: 'text/html' }), 'k-rosspointSender.html');
+  toast('Saved. Open the file from your disk; sending to the reader works from there.', 'info');
+}
 
 export const METHODS: Array<[TransferMethod, string]> = [
   ['crosspoint-http', 'CrossPoint HTTP upload (default)'],
@@ -131,7 +142,8 @@ export function mountDevicePanel(root: HTMLElement, hooks: DevicePanelHooks): vo
       ? h(
           'div',
           { class: 'banner', role: 'note' },
-          h('p', null, 'LAN upload from an https page is blocked by browsers. Use USB, download, run locally, or the helper app.'),
+          h('p', null, 'LAN upload from an https page is blocked by browsers. Save this page and open it from your disk: sending works from there.'),
+          h('button', { type: 'button', class: 'btn small', onclick: saveOfflineCopy }, 'Save an offline copy'),
           h(
             'details',
             null,
@@ -141,9 +153,9 @@ export function mountDevicePanel(root: HTMLElement, hooks: DevicePanelHooks): vo
               null,
               h('li', null, 'The device serves plain http. An https page may not call http (mixed content).'),
               h('li', null, 'Chrome also blocks public sites from calling private network addresses.'),
+              h('li', null, 'Offline copy: this app is one file. Save it, open it from your disk, and the LAN upload works (Chrome, Edge, Firefox). Your library stays in that browser.'),
               h('li', null, 'USB: put the X4 Pro in USB Drive mode and use "Write to USB folder".'),
-              h('li', null, 'Run locally: "npm run dev" or serve dist/ at http://localhost. LAN upload works there.'),
-              h('li', null, 'Helper app: run "python helper/helper.py" and set the helper URL in Settings.'),
+              h('li', null, 'Desktop app: it sends on its own, and it serves as the helper for this page (Settings > Helper URL).'),
             ),
             h('p', { class: 'hint' }, `More: ${README_LAN_SECTION}.`),
           ),

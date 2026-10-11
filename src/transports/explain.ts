@@ -6,8 +6,8 @@ import type { TransferError } from '../types';
 export const FALLBACKS = {
   usb: 'Write to a USB folder: put the reader in USB Drive mode, connect the cable, and use "Write to USB folder" (Chrome or Edge).',
   download: 'Download the file and copy it to the reader yourself, or upload it on the CrossPoint web page.',
-  localhost: 'Run this app locally at http://localhost (npm run preview, or any static server). A plain http page can talk to the device.',
-  helper: 'Start the local helper app (python helper.py). It sends the file from this computer to the device.',
+  localhost: 'Save an offline copy of this page and open it from your disk (or serve it at http://localhost). A page that is not https can talk to the device.',
+  helper: 'Run the desktop app. It sends on its own, and it acts as the helper for this page (Settings > Helper URL).',
   cors: 'Use a local endpoint that allows this page: the helper app, or a device or proxy that sends CORS headers for this origin.',
 } as const;
 

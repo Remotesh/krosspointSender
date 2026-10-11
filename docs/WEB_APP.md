@@ -193,6 +193,10 @@ always shows the reason and the fallback options.
 Private Network Access rules. So from the hosted app, LAN upload usually
 fails. Use one of these:
 
+- Save an offline copy of the page (button in the Device panel, or the
+  download on the releases page) and open it from your disk. A page opened
+  from disk is not https, so the LAN upload works. Verified in Chrome, Edge
+  and Firefox.
 - Write to the USB folder (below).
 - Download the EPUB and copy it.
 - Run the app locally at `http://localhost` (below). From an `http://`

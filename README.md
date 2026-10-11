@@ -89,11 +89,15 @@ The desktop app finds the reader on its own: it sends the CrossPoint UDP
 then probes port 80, then tries `crosspoint.local`. Manual IP entry always
 works.
 
-**Browser limit.** A page served over HTTPS cannot talk to an `http://`
-device on the LAN. Browsers block that as mixed content. So the hosted web
-app sends over Wi-Fi only through the desktop app, which also acts as a
-local helper on `127.0.0.1:8134`. Or run the web app at
-`http://localhost`, write to the USB folder, or download the EPUB.
+**Browser limit, and the way around it.** A page served over HTTPS cannot
+talk to an `http://` device on the LAN. Browsers block that as mixed
+content. The web app is one self-contained file, so the fix is simple:
+press "Save an offline copy" (or download the file from the releases) and
+open it from your disk. A page opened from disk is not HTTPS, so the LAN
+upload works. Verified in Chrome, Edge and Firefox. The library then lives
+in that browser. Other options: the desktop app, which also acts as a local
+helper on `127.0.0.1:8134`, `http://localhost`, the USB folder, or a plain
+download.
 
 ## Desktop app
 
