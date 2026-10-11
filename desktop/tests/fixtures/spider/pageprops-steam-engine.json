@@ -1,0 +1,16 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "normalized": [],
+    "redirects": [{ "from": "Steam engines", "to": "Steam engine" }],
+    "pages": [
+      { "pageid": 27692, "ns": 0, "title": "Steam engine" },
+      { "pageid": 1, "ns": 0, "title": "Heat engine" },
+      { "pageid": 2, "ns": 0, "title": "Work (physics)" },
+      { "pageid": 3, "ns": 0, "title": "Steam" },
+      { "pageid": 4, "ns": 0, "title": "Mercury (disambiguation)", "pageprops": { "disambiguation": "" } },
+      { "pageid": 5, "ns": 0, "title": "Thomas Newcomen" },
+      { "pageid": 6, "ns": 0, "title": "James Watt" }
+    ]
+  }
+}

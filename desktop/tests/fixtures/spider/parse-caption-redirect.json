@@ -1,0 +1,15 @@
+{
+  "parse": {
+    "title": "Steam engine",
+    "pageid": 27692,
+    "text": "<div class=\"mw-content-ltr mw-parser-output\" lang=\"en\" dir=\"ltr\"><table class=\"sidebar\"><tbody><tr><td><a href=\"/wiki/History_of_technology\">History of technology</a></td></tr></tbody></table>\n<figure class=\"mw-default-size\" typeof=\"mw:File/Thumb\"><a href=\"/wiki/File:Steam_locomotive_gear.jpg\" class=\"mw-file-description\"><img src=\"//upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Steam_locomotive_gear.jpg/250px-Steam_locomotive_gear.jpg\" width=\"250\" height=\"171\" class=\"mw-file-element\" /></a><figcaption>JŽ 06-018 steam locomotive, in <a href=\"/wiki/Ljubljana,_Slovenia\" class=\"mw-redirect\" title=\"Ljubljana, Slovenia\">Ljubljana, Slovenia</a></figcaption></figure>\n<p>A <b>steam engine</b> is a <a href=\"/wiki/Heat_engine\" title=\"Heat engine\">heat engine</a> that uses <a href=\"/wiki/Steam\" title=\"Steam\">steam</a>.</p><p>Engines like this ran mills such as <a href=\"/wiki/Stott_Park_Bobbin_Mill\" title=\"Stott Park Bobbin Mill\">Stott Park Bobbin Mill</a>.</p></div>",
+    "links": [
+      { "ns": 0, "title": "History of technology", "exists": true },
+      { "ns": 6, "title": "File:Steam locomotive gear.jpg", "exists": true },
+      { "ns": 0, "title": "Ljubljana, Slovenia", "exists": true },
+      { "ns": 0, "title": "Heat engine", "exists": true },
+      { "ns": 0, "title": "Steam", "exists": true },
+      { "ns": 0, "title": "Stott Park Bobbin Mill", "exists": true }
+    ]
+  }
+}

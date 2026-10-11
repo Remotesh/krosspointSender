@@ -1,0 +1,11 @@
+A Short Note on Paper
+
+Paper was first made in China around the second century. The method spread
+slowly along trade routes to the Middle East and then to Europe, where mills
+powered by water made it cheap enough for books and letters.
+
+Roses are red,
+violets are blue,
+<b>tags</b> stay as text & so do ampersands.
+
+The end.

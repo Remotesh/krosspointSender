@@ -1,0 +1,30 @@
+{
+  "parse": {
+    "title": "Steam engine",
+    "pageid": 27692,
+    "text": "<div class=\"mw-content-ltr mw-parser-output\" lang=\"en\" dir=\"ltr\"><div class=\"hatnote navigation-not-searchable\">For other uses, see <a href=\"/wiki/Steam_engine_(disambiguation)\" title=\"Steam engine (disambiguation)\">Steam engine (disambiguation)</a>.</div><table class=\"infobox\"><tbody><tr><td><a href=\"/wiki/Infobox_Only\" title=\"Infobox Only\">Infobox Only</a></td></tr></tbody></table><div class=\"sidebar\"><a href=\"/wiki/Sidebar_Link\">Sidebar Link</a></div><p>A <b>steam engine</b> is a <a href=\"/wiki/Heat_engine\" title=\"Heat engine\">heat engine</a> that performs <a href=\"/wiki/Work_(physics)\" title=\"Work (physics)\">mechanical work</a> using <a href=\"/wiki/Steam\" title=\"Steam\">steam</a> as its working fluid.<sup id=\"cite_ref-1\" class=\"reference\"><a href=\"#cite_note-1\">[1]</a></sup> See also <a href=\"/wiki/Mercury_(disambiguation)\" title=\"Mercury (disambiguation)\">Mercury</a> and the <a href=\"/wiki/Steam_engines\" class=\"mw-redirect\" title=\"Steam engines\">steam engines</a> page.</p><div id=\"toc\" class=\"toc\"><ul><li><a href=\"#History\">History</a></li><li><a href=\"/wiki/Toc_Link\">Toc Link</a></li></ul></div><div class=\"mw-heading mw-heading2\"><h2 id=\"History\">History</h2><span class=\"mw-editsection\"><a href=\"/w/index.php?title=Steam_engine&amp;action=edit&amp;section=1\">edit</a></span></div><p>Early designs by <a href=\"/wiki/Thomas_Newcomen\" title=\"Thomas Newcomen\">Thomas Newcomen</a> used <a href=\"/wiki/Heat_engine\" title=\"Heat engine\">heat engines</a> again. <a href=\"/wiki/Help:IPA\" title=\"Help:IPA\">IPA help</a>, <a href=\"/wiki/File:Steam.jpg\" class=\"mw-file-description\">image</a>, <a href=\"/wiki/Category:Engines\">engines category</a>, <a href=\"/wiki/Talk:Steam_engine\">talk</a>, <a href=\"/wiki/Special:BookSources/123\">books</a>, <a href=\"/wiki/Portal:Energy\">portal</a>, <a href=\"/wiki/Template:Steam\">template</a>, <a href=\"/w/index.php?title=Nonexistent_Page&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"Nonexistent Page (page does not exist)\">a redlink</a>, <a href=\"https://de.wikipedia.org/wiki/Dampfmaschine\" class=\"extiw\">German</a>, <a href=\"https://example.com/steam\" class=\"external text\">an external site</a>, <a href=\"/wiki/James_Watt#Early_life\" title=\"James Watt\">James Watt</a>, and <a href=\"/wiki/Steam_engine\" title=\"Steam engine\">this page</a>.</p><div role=\"note\" class=\"hatnote\">Main article: <a href=\"/wiki/Hatnote_Target\">Hatnote Target</a></div><div class=\"reflist\"><ol class=\"references\"><li id=\"cite_note-1\"><a href=\"/wiki/Reference_Link\">Reference Link</a></li></ol></div><div class=\"navbox\"><a href=\"/wiki/Navbox_Link\" title=\"Navbox Link\">Navbox Link</a></div><div class=\"catlinks\"><a href=\"/wiki/Category:Steam_power\">Steam power</a></div></div>",
+    "links": [
+      { "ns": 0, "title": "Steam engine (disambiguation)", "exists": true },
+      { "ns": 0, "title": "Infobox Only", "exists": true },
+      { "ns": 0, "title": "Sidebar Link", "exists": true },
+      { "ns": 0, "title": "Heat engine", "exists": true },
+      { "ns": 0, "title": "Work (physics)", "exists": true },
+      { "ns": 0, "title": "Steam", "exists": true },
+      { "ns": 0, "title": "Mercury (disambiguation)", "exists": true },
+      { "ns": 0, "title": "Steam engines", "exists": true },
+      { "ns": 0, "title": "Toc Link", "exists": true },
+      { "ns": 0, "title": "Thomas Newcomen", "exists": true },
+      { "ns": 12, "title": "Help:IPA", "exists": true },
+      { "ns": 6, "title": "File:Steam.jpg", "exists": true },
+      { "ns": 14, "title": "Category:Engines", "exists": true },
+      { "ns": 1, "title": "Talk:Steam engine", "exists": true },
+      { "ns": 100, "title": "Portal:Energy", "exists": true },
+      { "ns": 10, "title": "Template:Steam", "exists": true },
+      { "ns": 0, "title": "Nonexistent Page", "exists": false },
+      { "ns": 0, "title": "James Watt", "exists": true },
+      { "ns": 0, "title": "Hatnote Target", "exists": true },
+      { "ns": 0, "title": "Reference Link", "exists": true },
+      { "ns": 0, "title": "Navbox Link", "exists": true }
+    ]
+  }
+}

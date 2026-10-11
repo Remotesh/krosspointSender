@@ -1,0 +1,14 @@
+# web app
+node_modules/
+dist/
+.vite/
+build-smoke/
+# desktop app
+desktop/build*/
+desktop/dist/
+# editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
