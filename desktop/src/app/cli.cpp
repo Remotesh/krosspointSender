@@ -1,5 +1,7 @@
 // CLI mode. Runs without a window and prints the result.
 //   krosspoint_sender --send <file> --host <ip> [--port 80] [--folder /Books/K-rosspoint/] [--method webdav|http|ws|folder]
+//   krosspoint_sender --send <file> --method ble [--ble <address or name>] [--folder /Books/K-rosspoint/]
+//   krosspoint_sender --discover [--timeout 2000] | --discover-ble
 //   krosspoint_sender --convert <url-or-file> --out <file.epub>
 //   krosspoint_sender --pack <wikipedia-url-or-title> --out <file.epub> [--depth 1] [--max 20] [--lang en]
 //   krosspoint_sender --help
@@ -25,6 +27,15 @@ const char* const kUsage =
     "                    [--folder /Books/K-rosspoint/] [--method webdav|http|ws|folder]\n"
     "                    [--user <name> --password <pw>]\n"
     "                                         Send a file to a CrossPoint reader.\n"
+    "  krosspoint_sender --send <file> --method ble [--ble <address or name>]\n"
+    "                    [--folder /Books/K-rosspoint/]\n"
+    "                                         Send over Bluetooth LE (Windows). Without\n"
+    "                                         --ble it scans and uses the only reader.\n"
+    "                                         On the reader open File Transfer >\n"
+    "                                         Receive via Bluetooth.\n"
+    "  krosspoint_sender --discover [--timeout 2000]\n"
+    "                                         Find readers on the LAN and over Bluetooth.\n"
+    "  krosspoint_sender --discover-ble       Find readers over Bluetooth only.\n"
     "  krosspoint_sender --convert <url-or-file> --out <file.epub|.html|.txt|.md|.zip>\n"
     "                                         Fetch or read an article and write it.\n"
     "  krosspoint_sender --pack <wikipedia-url-or-title> --out <file.epub>\n"
@@ -72,19 +83,55 @@ std::optional<TransferMethod> methodArg(const std::string& m) {
     if (s == "http" || s == "crosspoint-http") return TransferMethod::CrossPointHttp;
     if (s == "ws" || s == "websocket" || s == "crosspoint-ws") return TransferMethod::CrossPointWs;
     if (s == "folder") return TransferMethod::Folder;
+    if (s == "ble" || s == "bluetooth") return TransferMethod::Ble;
     return std::nullopt;
+}
+
+// Fills the Bluetooth fields of p from --ble (address or name), or scans
+// and takes the only reader. Returns false after printing the problem.
+bool resolveBleTarget(const Args& a, DeviceProfile& p) {
+    std::string target = a.count("ble") ? a.at("ble") : "";
+    if (target == "1") target.clear();   // "--ble" with no value
+    if (!target.empty()) {
+        if (auto addr = net::parseBleAddress(target)) p.bleAddress = *addr;
+        else p.bleName = target;   // the transport scans for the name
+        return true;
+    }
+    std::printf("Scanning 4 s for Bluetooth readers...\n");
+    std::fflush(stdout);
+    std::vector<net::BleDiscovered> list;
+    try {
+        list = net::discoverBle(4000);
+    } catch (const TransferError& e) {
+        std::fprintf(stderr, "Error: %s\n", e.message.c_str());
+        return false;
+    }
+    if (list.size() == 1) {
+        p.bleAddress = list[0].address;
+        p.bleName = list[0].name;
+        return true;
+    }
+    if (list.empty()) {
+        std::fprintf(stderr, "Error: no Bluetooth reader found. %s.\n", net::kBleReaderHint);
+        return false;
+    }
+    std::fprintf(stderr, "Error: %d Bluetooth readers found. Choose one with --ble <address or name>:\n",
+                 static_cast<int>(list.size()));
+    for (auto& d : list)
+        std::fprintf(stderr, "  %s  %s  %d dBm\n", net::formatBleAddress(d.address).c_str(), d.name.c_str(), d.rssi);
+    return false;
 }
 
 int cmdSend(const Args& a) {
     std::string file = a.at("send");
-    auto host = a.find("host");
-    if (host == a.end()) {
-        std::fprintf(stderr, "Error: --send needs --host <ip>.\n");
-        return 1;
-    }
     auto m = methodArg(a.count("method") ? a.at("method") : "");
     if (!m) {
         std::fprintf(stderr, "Error: unknown method \"%s\".\n", a.at("method").c_str());
+        return 1;
+    }
+    auto host = a.find("host");
+    if (host == a.end() && *m != TransferMethod::Ble) {
+        std::fprintf(stderr, "Error: --send needs --host <ip>.\n");
         return 1;
     }
     bool ok = false;
@@ -100,7 +147,7 @@ int cmdSend(const Args& a) {
 
     DeviceProfile p = net::defaultProfile(FirmwareType::CrossPoint);
     p.name = "CLI";
-    p.host = host->second;
+    p.host = host == a.end() ? std::string() : host->second;
     p.method = *m;
     if (a.count("port")) p.port = std::atoi(a.at("port").c_str());
     else if (*m == TransferMethod::CrossPointWs) p.port = 81;
@@ -109,7 +156,20 @@ int cmdSend(const Args& a) {
     if (a.count("user")) p.username = a.at("user");
     if (a.count("password")) p.password = a.at("password");
 
-    std::string where = p.method == TransferMethod::Folder ? p.host : p.host + ":" + std::to_string(p.port);
+    if (p.method == TransferMethod::Ble) {
+        if (!net::bleSupported()) {
+            std::fprintf(stderr, "Error: Bluetooth transfer needs the Windows build.\n");
+            return 1;
+        }
+        // Refuse a file over 16 MB before any scan (the transport checks again).
+        if (f.bytes.size() > 16ull * 1024 * 1024) {
+            std::fprintf(stderr, "Error: the file is %s. Bluetooth transfer allows at most 16 MB.\n",
+                         humanBytes(f.bytes.size()).c_str());
+            return 1;
+        }
+        if (!resolveBleTarget(a, p)) return 1;
+    }
+    std::string where = deviceWhere(p);
     std::printf("Sending %s (%s) to %s via %s...\n", f.name.c_str(), humanBytes(f.bytes.size()).c_str(),
                 where.c_str(), toString(p.method).c_str());
     std::fflush(stdout);
@@ -131,7 +191,7 @@ int cmdSend(const Args& a) {
         return 0;
     }
     if (r.error) {
-        net::Explanation ex = net::explain(*r.error);
+        net::Explanation ex = net::explain(*r.error, p.method);
         std::fprintf(stderr, "Failed (%s): %s\n", net::toString(r.error->code).c_str(), ex.title.c_str());
         for (auto& s : ex.reasons) std::fprintf(stderr, "  - %s\n", s.c_str());
         for (auto& s : ex.fallbacks) std::fprintf(stderr, "  > %s\n", s.c_str());
@@ -296,20 +356,44 @@ bool isCliArgs(int argc, char** argv) {
     return false;
 }
 
+// Lists the Bluetooth readers. Returns the number found (0 on error).
+int discoverBlePrint() {
+    if (!net::bleSupported()) {
+        std::printf("Bluetooth: not available in this build (Windows only).\n");
+        return 0;
+    }
+    std::printf("Discovering: Bluetooth LE scan for 4 s (CrossPoint file service)...\n");
+    std::fflush(stdout);
+    std::vector<net::BleDiscovered> list;
+    try {
+        list = net::discoverBle(4000);
+    } catch (const TransferError& e) {
+        std::printf("Bluetooth: %s\n", e.message.c_str());
+        return 0;
+    }
+    if (list.empty()) std::printf("No Bluetooth reader found. %s.\n", net::kBleReaderHint);
+    for (const auto& d : list) {
+        std::string addr = net::formatBleAddress(d.address);
+        std::printf("ble %s  %s  %d dBm  (send: --method ble --ble %s)\n", addr.c_str(), d.name.c_str(), d.rssi,
+                    addr.c_str());
+    }
+    return static_cast<int>(list.size());
+}
+
 int cmdDiscover(const Args& a) {
+    if (a.count("discover-ble") && !a.count("discover")) return discoverBlePrint() > 0 ? 0 : 1;
     int timeout = 2000;
     auto it = a.find("timeout");
     if (it != a.end() && !it->second.empty()) timeout = std::atoi(it->second.c_str());
     std::printf("Discovering: UDP \"hello\" to port 8134 (broadcast + unicast sweep), then an HTTP probe of port 80...\n");
     std::fflush(stdout);
     std::vector<net::Discovered> list = net::discoverCrossPoint(timeout);
-    if (list.empty()) {
-        std::printf("No CrossPoint reader found. Put the reader on the File Transfer screen, and check that this PC is on the same network.\n");
-        return 1;
-    }
+    if (list.empty())
+        std::printf("No CrossPoint reader found on the LAN. Put the reader on the File Transfer screen, and check that this PC is on the same network.\n");
     for (const auto& d : list)
         std::printf("%s  ws-port %d  host %s  via %s\n", d.ip.c_str(), d.wsPort, d.hostname.c_str(), d.raw.c_str());
-    return 0;
+    int ble = discoverBlePrint();
+    return list.empty() && ble == 0 ? 1 : 0;
 }
 
 int runCli(int argc, char** argv) {
@@ -322,7 +406,7 @@ int runCli(int argc, char** argv) {
         if (a.count("send")) return cmdSend(a);
         if (a.count("convert")) return cmdConvert(a);
         if (a.count("pack")) return cmdPack(a);
-        if (a.count("discover")) return cmdDiscover(a);
+        if (a.count("discover") || a.count("discover-ble")) return cmdDiscover(a);
         std::fprintf(stderr, "Unknown arguments.\n\n%s", kUsage);
         return 1;
     } catch (const std::exception& e) {

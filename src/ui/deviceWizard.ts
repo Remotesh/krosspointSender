@@ -1,25 +1,34 @@
 /**
  * Device setup wizard. Four steps:
- * 1 Add Device (with the transfer method), 2 Test Connection,
+ * 1 Add Device (with the transfer method), 2 Test Connection (Bluetooth:
+ * "Connect via Bluetooth", where the click chooses the reader),
  * 3 Choose Destination Folder (folder browser), 4 Send Test EPUB.
  * Each step saves the profile. Each step shows the limitations of the
  * chosen method for this origin.
  */
 import type { DeviceProfile, FirmwareType, OutputFormat, TransferMethod } from '../types';
 import { TransferError } from '../types';
-import { getTransport, listTransports } from '../transports';
+import { getTransport, listTransports, onBleDeviceChosen } from '../transports';
 import { renderFolderBrowser } from './folderBrowser';
 import { defaultProfile, deleteProfile, listProfiles, saveProfile, validateProfile } from '../deviceProfiles';
 import { sendTestEpub } from '../epub';
 import { createDrawer, errorMessage, field, h, replace, select, type Drawer } from './dom';
 import { asTransferError, persistSettings, sendFile } from './actions';
-import { METHODS, renderExplain } from './devicePanel';
+import { METHODS, renderExplain, testButtonLabel } from './devicePanel';
 import { store } from './state';
 import { toast } from './toast';
 
 type Draft = Omit<DeviceProfile, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<DeviceProfile, 'id' | 'createdAt' | 'updatedAt'>>;
 
 const STEPS = ['Add Device', 'Test Connection', 'Choose Destination Folder', 'Send Test EPUB'];
+
+/** Step names for a method. Bluetooth step 2 is the pairing step. */
+function stepNames(method: TransferMethod): string[] {
+  return method === 'ble' ? ['Add Device', 'Connect via Bluetooth', 'Choose Destination Folder', 'Send Test EPUB'] : STEPS;
+}
+
+/** What to do on the reader before a Bluetooth connect. */
+const BLE_HINT = 'On the reader open File Transfer > Receive via Bluetooth, then press Connect. Choose the reader (CrossPoint-XXXX) in the browser window. Needs the CrossPoint ble-transfer firmware build.';
 
 export interface DeviceWizard extends Drawer {
   start(profileId?: string): void;
@@ -30,6 +39,11 @@ export function createDeviceWizard(): DeviceWizard {
   const drawer = createDrawer('Devices');
   let step = 0;
   let draft: Draft = defaultProfile('crosspoint');
+  // Keep the draft in step with the reader chosen in the Bluetooth chooser,
+  // so a later persist() does not write back an old device id.
+  onBleDeviceChosen((id, dev) => {
+    if (draft.id === id) draft = { ...draft, bleDeviceId: dev.id, bleDeviceName: dev.name };
+  });
 
   function methodLabel(m: TransferMethod): string {
     return METHODS.find(([v]) => v === m)?.[1] ?? m;
@@ -154,7 +168,7 @@ export function createDeviceWizard(): DeviceWizard {
     return h(
       'div',
       null,
-      h('p', { class: 'hint' }, 'On the X4 Pro open File Transfer. The screen shows the IP address. Use it as the host.'),
+      h('p', { class: 'hint' }, 'On the X4 Pro open File Transfer. The screen shows the IP address. Use it as the host. For Bluetooth no host is needed.'),
       field('Name', name),
       field('Firmware', firmware),
       field('Host', host, 'IP or name. Hotspot mode uses 192.168.4.1.'),
@@ -164,7 +178,7 @@ export function createDeviceWizard(): DeviceWizard {
       field('Password (optional)', pass, 'Stored in this browser only.'),
       field('Default format', fmt),
       field('Notes', notes),
-      h('fieldset', null, h('legend', null, 'Transfer method'), h('p', { class: 'hint' }, 'CrossPoint HTTP upload is the default. WebDAV overwrites files. WebSocket shows real progress.'), method, limitsHost),
+      h('fieldset', null, h('legend', null, 'Transfer method'), h('p', { class: 'hint' }, 'CrossPoint HTTP upload is the default. WebDAV overwrites files. WebSocket shows real progress. Bluetooth needs no Wi-Fi but is slow (articles, not big packs).'), method, limitsHost),
       problems,
       del,
       nav({
@@ -184,28 +198,40 @@ export function createDeviceWizard(): DeviceWizard {
 
   function stepTest(): HTMLElement {
     const out = h('div', { 'aria-live': 'polite' });
+    const ble = draft.method === 'ble';
     const run = h('button', {
       type: 'button',
       class: 'btn primary',
       onclick: async () => {
-        replace(out, h('p', null, 'Testing...'));
+        // Bluetooth: testConnection must be the first await of this click
+        // handler, so the browser may show its device chooser.
+        replace(out, h('p', null, ble ? 'Choose the reader in the Bluetooth window...' : 'Testing...'));
         try {
           const res = await getTransport(draft.method).testConnection(draft as DeviceProfile);
           if (!res.ok) throw res.error ?? new TransferError('unknown', 'The test failed.');
+          if (ble && typeof res.info?.bleDeviceId === 'string') {
+            draft = { ...draft, bleDeviceId: res.info.bleDeviceId, bleDeviceName: String(res.info.bleDeviceName ?? '') || undefined };
+            await persist();
+          }
           replace(
             out,
-            h('p', { class: 'ok' }, `Connected in ${res.latencyMs ?? '?'} ms.`),
+            h('p', { class: 'ok' }, `Connected${ble && draft.bleDeviceName ? ` to ${draft.bleDeviceName}` : ''} in ${res.latencyMs ?? '?'} ms.`),
             res.info ? h('pre', { class: 'code' }, JSON.stringify(res.info, null, 2)) : null,
           );
         } catch (err) {
-          replace(out, renderExplain(asTransferError(err)));
+          replace(out, renderExplain(asTransferError(err), undefined, draft.method));
         }
       },
-    }, 'Test Connection');
+    }, testButtonLabel(draft.method));
     return h(
       'div',
       null,
-      h('p', { class: 'hint' }, 'On the X4 Pro open File Transfer first. The device must stay on that screen.'),
+      h(
+        'p',
+        { class: 'hint' },
+        ble ? BLE_HINT : 'On the X4 Pro open File Transfer first. The device must stay on that screen.',
+      ),
+      ble && draft.bleDeviceName ? h('p', null, `Paired reader: ${draft.bleDeviceName}. Press Connect to check it, or to choose another one.`) : null,
       limitsBox(),
       run,
       out,
@@ -255,7 +281,7 @@ export function createDeviceWizard(): DeviceWizard {
           const res = await sendFile(draft as DeviceProfile, file);
           replace(out, h('p', { class: 'ok' }, `Sent. Open ${res.remotePath ?? draft.targetFolder} on the device.`));
         } catch (err) {
-          replace(out, renderExplain(asTransferError(err)));
+          replace(out, renderExplain(asTransferError(err), undefined, draft.method));
         }
       },
     }, 'Send Test EPUB');
@@ -272,15 +298,16 @@ export function createDeviceWizard(): DeviceWizard {
 
   function go(n: number): void {
     step = Math.max(0, Math.min(STEPS.length - 1, n));
+    const names = stepNames(draft.method);
     const steps = h(
       'ol',
       { class: 'wizard-steps' },
-      ...STEPS.map((s, i) =>
+      ...names.map((s, i) =>
         h('li', { class: i === step ? 'current' : i < step ? 'done' : '', 'aria-current': i === step ? 'step' : false }, s),
       ),
     );
     const body = [stepAdd, stepTest, stepFolder, stepSend][step]();
-    replace(drawer.body, steps, h('h3', null, `Step ${step + 1}: ${STEPS[step]}`), body);
+    replace(drawer.body, steps, h('h3', null, `Step ${step + 1}: ${names[step]}`), body);
     drawer.body.querySelector<HTMLElement>('input, select, button.primary')?.focus();
   }
 

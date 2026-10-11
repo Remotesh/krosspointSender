@@ -2,6 +2,8 @@
 // clipboard routing.
 #include "app/ui.h"
 
+#include "net/file_send.h"
+
 #include <imgui.h>
 
 #include <cstdio>
@@ -45,6 +47,12 @@ RawInput rawFromFile(const std::string& path, const std::string& bytes) {
 
 void handleDropFile(App& app, const std::string& path) {
     app.addLog("Dropped file: " + path);
+    // Not an article input (for example firmware.bin): offer "send as file"
+    // in the send-file window instead of a convert that cannot work.
+    if (!net::isArticleInputPath(path)) {
+        openSendFile(app, {path}, true);
+        return;
+    }
     app.filePath = path;
     setTab(app, SourceTab::File);
     jobLoadFile(app, path);

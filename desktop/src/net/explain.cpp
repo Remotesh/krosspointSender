@@ -18,6 +18,9 @@ const char* kNetwork =
 const char* kHotspot =
     "Use the reader hotspot: join the Wi-Fi network \"CrossPoint-Reader\" and send to 192.168.4.1.";
 const char* kWebDav = "Use the WebDAV method. It replaces a file with the same name.";
+const char* kBleScreen =
+    "On the reader open File Transfer > Receive via Bluetooth. The reader advertises only while this screen is open.";
+const char* kBleWifi = "Send over Wi-Fi instead: open File Transfer on the reader and use a CrossPoint or WebDAV device.";
 
 } // namespace
 
@@ -83,6 +86,38 @@ Explanation explain(const TransferError& e) {
             x.title = "The transfer failed";
             x.reasons = {e.message.empty() ? "An unknown error occurred." : e.message};
             x.fallbacks = lan;
+            break;
+    }
+    return x;
+}
+
+Explanation explain(const TransferError& e, TransferMethod m) {
+    Explanation x = explain(e);
+    if (m != TransferMethod::Ble) return x;
+    const std::vector<std::string> ble = {kBleScreen, kBleWifi, kFolder, kDownload};
+    switch (e.code) {
+        case TransferErrorCode::Network:
+        case TransferErrorCode::NotFound:
+            x.title = e.code == TransferErrorCode::Network ? "The Bluetooth link to the reader failed"
+                                                           : "The reader was not found over Bluetooth";
+            x.reasons = {
+                "Check that the reader shows the Receive via Bluetooth screen. It stops advertising when you leave it.",
+                "Keep the reader near this computer, and check that Bluetooth is on in the Windows settings.",
+                "Only one computer can connect at a time.",
+            };
+            if (!e.message.empty()) x.reasons.insert(x.reasons.begin(), e.message);
+            x.fallbacks = ble;
+            break;
+        case TransferErrorCode::Unsupported:
+            x.fallbacks = {kBleWifi, kFolder, kDownload};
+            break;
+        case TransferErrorCode::Device:
+            x.fallbacks = {kBleScreen, kFolder, kDownload};
+            break;
+        case TransferErrorCode::Unknown:
+            x.fallbacks = ble;
+            break;
+        default:
             break;
     }
     return x;

@@ -30,6 +30,7 @@ set(KS_APP_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/panel_pack.cpp
     ${CMAKE_CURRENT_LIST_DIR}/win_library_packs.cpp
     ${CMAKE_CURRENT_LIST_DIR}/folder_browser.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/send_file.cpp
 )
 
 # The app target has no warning flags of its own. Turn them on for these

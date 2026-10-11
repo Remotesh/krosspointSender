@@ -320,9 +320,21 @@ std::string methodLabel(TransferMethod m) {
         case TransferMethod::CrossPointHttp: return "CrossPoint HTTP upload";
         case TransferMethod::CrossPointWs: return "CrossPoint WebSocket (port 81)";
         case TransferMethod::Folder: return "Local folder (USB drive)";
-        case TransferMethod::Ble: return "Bluetooth (K-Reader, simulated)";
+        case TransferMethod::Ble: return "Bluetooth LE (CrossPoint)";
     }
     return toString(m);
+}
+
+std::string deviceWhere(const DeviceProfile& p) {
+    switch (p.method) {
+        case TransferMethod::Ble: {
+            std::string s = p.bleName.empty() ? std::string("Bluetooth") : p.bleName;
+            if (p.bleAddress) s += " " + net::formatBleAddress(p.bleAddress);
+            return s;
+        }
+        case TransferMethod::Folder: return p.host;
+        default: return p.host + ":" + std::to_string(p.port);
+    }
 }
 
 std::string formatLabel(OutputFormat f) {

@@ -5,7 +5,7 @@
  */
 import type { DeviceProfile, TransferMethod, TransferProgress, TransferState } from '../types';
 import { TransferError } from '../types';
-import { downloadBlob, explainBlock, getHelperTransport, getTransport } from '../transports';
+import { downloadBlob, explainBlock, getHelperTransport, getTransport, onBleDeviceChosen } from '../transports';
 import { saveProfile } from '../deviceProfiles';
 import { sendTestEpub } from '../epub';
 import { errorMessage, field, formatBytes, h, replace } from './dom';
@@ -13,6 +13,7 @@ import { asTransferError, downloadFile, fallbackProfile, persistSettings, sendFi
 import { exportCurrent } from './outputPanel';
 import { hasOutput, store } from './state';
 import { recordPackSend } from './packOutput';
+import { mountSendFileSection } from './sendFilePanel';
 import { toast } from './toast';
 
 /**
@@ -33,7 +34,7 @@ export const METHODS: Array<[TransferMethod, string]> = [
   ['usb', 'USB folder (File System Access)'],
   ['download', 'Manual download'],
   ['opds', 'OPDS package (ZIP)'],
-  ['ble', 'Bluetooth (K-Reader, simulated)'],
+  ['ble', 'Bluetooth (CrossPoint BLE mode)'],
 ];
 
 /** README section that explains the https LAN block. */
@@ -52,10 +53,34 @@ export interface DevicePanelHooks {
   openWizard(profileId?: string): void;
 }
 
-/** Make the explain box for a failed transfer, with fallback buttons. */
-export function renderExplain(err: TransferError, onDone?: () => void): HTMLElement {
-  const info = explainBlock(err, location.origin);
+/** The label of the Test Connection button. Bluetooth calls it Connect: the click chooses the reader. */
+export function testButtonLabel(method: TransferMethod | undefined): string {
+  return method === 'ble' ? 'Connect' : 'Test Connection';
+}
+
+/** How a profile shows in the device list. */
+export function profileLabel(p: DeviceProfile): string {
+  if (p.method === 'ble') return `${p.name} (Bluetooth${p.bleDeviceName ? `: ${p.bleDeviceName}` : ''})`;
+  return `${p.name} (${p.host})`;
+}
+
+/**
+ * Store the reader chosen in the Bluetooth chooser in its profile
+ * (bleDeviceName, bleDeviceId), so a reload can reconnect with getDevices().
+ */
+function rememberBleDevice(profileId: string, dev: { name: string; id: string }): void {
   const st = store();
+  const p = st.get().profiles.find((x) => x.id === profileId);
+  if (!p || (p.bleDeviceId === dev.id && p.bleDeviceName === dev.name)) return;
+  void saveProfile({ ...p, bleDeviceId: dev.id, bleDeviceName: dev.name })
+    .then((saved) => st.set({ profiles: st.get().profiles.map((x) => (x.id === saved.id ? saved : x)) }))
+    .catch(() => undefined);
+}
+
+/** Make the explain box for a failed transfer, with fallback buttons. */
+export function renderExplain(err: TransferError, onDone?: () => void, method?: TransferMethod): HTMLElement {
+  const st = store();
+  const info = explainBlock(err, location.origin, method ?? st.selectedProfile()?.method);
   const fallbackBtn = (label: string, fn: () => Promise<void> | void): HTMLButtonElement =>
     h('button', {
       type: 'button',
@@ -132,6 +157,7 @@ export function mountDevicePanel(root: HTMLElement, hooks: DevicePanelHooks): vo
   const explainHost = h('div');
 
   const btnTest = h('button', { type: 'button', class: 'btn' }, 'Test Connection');
+  onBleDeviceChosen(rememberBleDevice);
   const btnTestEpub = h('button', { type: 'button', class: 'btn' }, 'Send Test EPUB');
   const btnSend = h('button', { type: 'button', class: 'btn primary' }, 'Send');
   const btnEdit = h('button', { type: 'button', class: 'btn small' }, 'Edit');
@@ -196,12 +222,24 @@ export function mountDevicePanel(root: HTMLElement, hooks: DevicePanelHooks): vo
 
   btnTest.addEventListener('click', () =>
     void guard(async (p) => {
-      st.set({ transfer: { state: 'connecting', message: `Testing ${p.host}:${p.port}` } });
+      // Bluetooth: this click is the user gesture that lets the browser show
+      // the device chooser. testConnection must be the first await here.
+      st.set({
+        transfer: {
+          state: 'connecting',
+          message: p.method === 'ble' ? 'Choose the reader in the Bluetooth window' : `Testing ${p.host}:${p.port}`,
+        },
+      });
       const res = await getTransport(p.method).testConnection(p);
       if (!res.ok) throw res.error ?? new TransferError('unknown', 'The test failed.');
       const ver = res.info && typeof res.info.version === 'string' ? ` (firmware ${res.info.version})` : '';
+      const who = res.info && typeof res.info.bleDeviceName === 'string' ? ` to ${res.info.bleDeviceName}` : '';
+      const free =
+        res.info && typeof res.info.freeKiB === 'number' && res.info.freeKiB > 0
+          ? `, ${formatBytes(res.info.freeKiB * 1024)} free`
+          : '';
       st.set({
-        transfer: { state: 'complete', message: `Connected in ${res.latencyMs ?? '?'} ms${ver}` },
+        transfer: { state: 'complete', message: `Connected${who} in ${res.latencyMs ?? '?'} ms${ver}${free}` },
       });
     }),
   );
@@ -255,6 +293,7 @@ export function mountDevicePanel(root: HTMLElement, hooks: DevicePanelHooks): vo
     statusLine,
     bar,
     explainHost,
+    mountSendFileSection().el,
   );
 
   function renderProfiles(): void {
@@ -262,13 +301,14 @@ export function mountDevicePanel(root: HTMLElement, hooks: DevicePanelHooks): vo
     replace(
       profileSel,
       h('option', { value: '' }, profiles.length ? '(choose a device)' : '(no devices yet)'),
-      ...profiles.map((p) => h('option', { value: p.id }, `${p.name} (${p.host})`)),
+      ...profiles.map((p) => h('option', { value: p.id }, profileLabel(p))),
     );
     profileSel.value = selectedProfileId ?? '';
     const p = st.selectedProfile();
     methodSel.disabled = !p;
     btnEdit.disabled = !p;
     methodSel.value = p?.method ?? 'crosspoint-http';
+    btnTest.textContent = testButtonLabel(p?.method);
     const lim = p ? getTransport(p.method).limitations() : [];
     const unsupported = p && !getTransport(p.method).isSupported();
     replace(

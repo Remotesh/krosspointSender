@@ -329,6 +329,12 @@ progress { width: 100%; height: 6px; accent-color: var(--amber); }
 }
 .explain ul { padding-left: 1.1rem; margin: 0.3rem 0; }
 .explain p { margin: 0.4rem 0 0.1rem; }
+.send-file { border-top: 1px solid var(--muted); margin-top: 0.6rem; padding-top: 0.4rem; }
+.send-file > summary { cursor: pointer; color: var(--tan); font-size: 0.9rem; }
+.send-file .btn-row.tight { align-items: center; margin: 0.2rem 0 0.4rem; }
+.send-file-list, .send-file-results { word-break: break-word; }
+.send-file-results li.bad { color: var(--bad); }
+.send-file-hint { color: var(--ok); font-size: 0.82rem; }
 
 /* ── Drawers ── */
 .drawer-wrap { position: fixed; inset: 0; z-index: 50; }

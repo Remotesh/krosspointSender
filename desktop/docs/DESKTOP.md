@@ -205,14 +205,13 @@ public:
 ```
 
 Transports (one file each): `webdav.cpp`, `crosspoint_http.cpp`,
-`crosspoint_ws.cpp`, `folder.cpp`, `ble_mock.cpp`. Same behaviour as the
+`crosspoint_ws.cpp`, `folder.cpp`, `ble_transport.cpp`. Same behaviour as the
 web spec: WebDAV MKCOL each segment then PUT then HEAD verify; HTTP
 `/mkdir` then `/upload?path=` multipart `file`, on "already exists"
 `/delete` then retry once, verify via `/api/files`; WS protocol on port 81
 with 16 KiB chunks (libcurl `CURLWS_BINARY`, `curl_ws_send`/`curl_ws_recv`);
-Folder writes `<folder>/<targetFolder>/<name>` and verifies size; BLE mock
-simulates pair/metadata/chunks/checksum/commit with progress and documents
-the future K-Reader protocol in its header comment.
+Folder writes `<folder>/<targetFolder>/<name>` and verifies size; BLE is
+the real CrossPoint Bluetooth LE sender (see "Addendum: BLE transfer").
 Progress callbacks use `CURLOPT_XFERINFOFUNCTION`. Timeouts: connect 5 s.
 `testConnection`: GET `/api/status` for CrossPoint methods (put the JSON in
 `info`), OPTIONS `/` for WebDAV, directory exists for Folder.
@@ -295,8 +294,8 @@ SDL2 + OpenGL3 + ImGui, docking not required. Window title
   (`KS_DATA_DIR` env var overrides `dataDir()`), settings round trip,
   library save/list/delete/clear/addTransfer, transports against a tiny
   in-process cpp-httplib fake device (WebDAV PUT/MKCOL/HEAD, /upload with
-  "already exists" then /delete retry, /api/status), explain(), BLE mock
-  reaches Complete, helper server `/status` and `/send` through the fake
+  "already exists" then /delete retry, /api/status), explain(), BLE
+  transport refusals (test_ble covers the protocol), helper server `/status` and `/send` through the fake
   device, UDP discovery parser on the reply string.
 
 ## UI as built (2026-10-10, after the real-device test)
@@ -508,3 +507,170 @@ through settings.json.
   [--max 20] [--lang en]` builds a pack with the auto-selection; and
   `--send` works for it as before.
 - All jobs on worker threads with cancel; `request_frame` wake.
+
+## Addendum 2026-10-10: BLE transfer
+
+The contract is `../docs/BLE_PROTOCOL.md` (protocol v1, shared with the web
+app and the CrossPoint fork). The desktop implements the sender side. The
+old mock (`ble_mock.cpp`) is gone.
+
+Files (`src/net/`):
+
+- `ble_link.h`: abstract `ble::BleLink` (connect by address, subscribe
+  STATUS, read INFO, write META/CONTROL with response, write CHUNK without
+  response, disconnect, connected, mtu). Plain C++; no WinRT type. Also
+  `ble::supported()`, `ble::makeLink()`, `ble::scan()`.
+- `ble_protocol.h/.cpp`: `ble::Session` = the protocol driver on any link.
+  INFO read (optional; protocol version must be 1), META, READY within 15 s
+  (chunk size from READY, not INFO), CHUNKs with at most 48 outstanding
+  past the last ACK, no ACK for 10 s fails, wait for ACK(fileSize), VERIFY
+  (CRC_OK must carry our CRC; CRC_BAD fails), COMMIT, COMMITTED path is the
+  remote path. Any failure after META sends a best-effort ABORT when the
+  link is up. Cancel is polled between chunks and during waits. Size rules:
+  refuse empty and > 16 MB (code `unsupported`, before connecting), warn
+  > 3 MB (a Connecting progress message). CRC-32 is `net::crc32`
+  (`common.cpp`, test vector `0xCBF43926`).
+- `ble_transport.cpp`: `TransferMethod::Ble` transport. Resolves the
+  address (profile `bleAddress`, else a 4 s scan for `bleName`), connects
+  (15 s), runs the session, disconnects. `testConnection` = connect + INFO
+  + PING/PONG; `info` JSON has address, protocolVersion, maxChunkData,
+  freeKiB, firmware, mtu.
+- `ble_win.cpp` (Windows): C++/WinRT, compiled alone as C++20 (rest stays
+  C++17). Joins the MTA once per thread; blocking waits are a polling
+  `wait_for()` loop (timeouts and cancel), no coroutines.
+  `BluetoothLEAdvertisementWatcher` (active scan, no watcher filter:
+  advertisements are merged by address because the scan response carries
+  the name but not the UUID; a device counts when any packet lists
+  FILE_SERVICE), `BluetoothLEDevice::FromBluetoothAddressAsync`,
+  `GattSession` (MaintainConnection, MaxPduSize for logging only),
+  `GetGattServicesForUuidAsync`/`GetCharacteristicsForUuidAsync`
+  (uncached), CCCD Notify + `ValueChanged` for STATUS,
+  `WriteValueWithResultAsync` with `WriteWithResponse` /
+  `WriteWithoutResponse`. No pairing.
+- `ble_stub.cpp` (other OS): every call reports `unsupported`.
+
+Build: MSYS2 package `mingw-w64-x86_64-cppwinrt` (headers in
+`/mingw64/include/winrt`). `ks_core` links `runtimeobject ole32 oleaut32`
+on Windows (`KS_NET_LIBS` in `src/net/sources.cmake`). These resolve to
+system DLLs (api-ms-win-core-winrt-*), so `scripts/package.sh` needs no new
+DLL.
+
+Public API additions (`net.h`): `BleDiscovered {address, name, rssi}`,
+`bleSupported()`, `discoverBle(timeoutMs = 4000, cancel)` (throws
+`TransferError`), `formatBleAddress` / `parseBleAddress`
+(`AA:BB:CC:DD:EE:FF`), `kBleReaderHint`, `explain(e, method)` (Bluetooth
+reasons and fallbacks for `Ble`).
+
+Types (`core/types.h`): `DeviceProfile.bleAddress` (uint64, 0 = not
+chosen) and `DeviceProfile.bleName`. `devices.json` stores `bleAddress` as
+the `AA:BB:..` string (a JSON number is also read) and `bleName`.
+
+App: devices window has a "found over bluetooth" section with a
+`bluetooth` button (4 s scan, `JobKind::BleScan`), the hint "On the reader
+open File Transfer > Receive via Bluetooth", rows name / address / rssi /
+add. The form shows `address` and `reader` instead of host/port for the
+Bluetooth method. Test and confirm work as for the other methods. The top
+bar and send flow are unchanged; device labels show the Bluetooth name and
+address (`deviceWhere()`).
+
+CLI: `--send <file> --method ble [--ble <address or name>]` (without
+`--ble` it scans and takes the only reader); `--discover` also lists
+Bluetooth readers; `--discover-ble` lists only those.
+
+Tests: `test_ble` drives `ble::Session` against a fake reader link: wire
+encoding, happy path (data and CRC match, progress = ACK / size), the
+48-chunk window with delayed ACKs, chunk size from READY, out-of-order
+ERROR, CRC_BAD then ABORT (no COMMIT), NO_SPACE / BUSY / ERROR on META,
+READY timeout, ACK timeout, size and name refusal before META, cancel (with
+ABORT) and cancel before META, link loss (no ABORT), PING, profile JSON
+round trip. `test_net` checks the transport refusals without the radio.
+
+Not verified yet: no reader runs the BLE firmware, so connect, GATT
+discovery, writes and notifications against a real CrossPoint are untested.
+Scanning was tested on the Intel adapter of the build machine.
+
+## Addendum 2026-10-11: Send a file
+
+Purpose: push any file from disk to the reader's SD card as it is, over
+the normal transports (CrossPoint HTTP, WebDAV, WebSocket, USB folder,
+Bluetooth LE). No conversion and no library article. The main use is a
+CrossPoint firmware image: send `firmware.bin` to `/`, then on the reader
+open Settings > System > SD Card Firmware Update and pick the file. The CLI
+already did this (`--send <file> --folder / --method ...`).
+
+Entry points (GUI):
+
+- Top bar: `send a file...` button next to `send`. Menu `file > send a
+  file...`. Keybind `send_file`, default Ctrl+Shift+F (Settings > keys).
+  Each opens the native multi-select open dialog
+  (`openFilesDialog()` in `dialogs.cpp`: `GetOpenFileNameW` with
+  `OFN_ALLOWMULTISELECT | OFN_EXPLORER`, from comdlg32; the app target
+  links `comdlg32` explicitly in `CMakeLists.txt`). On other platforms the
+  stub reports "unsupported"; the app shows a toast (drop the file, or use
+  the CLI) and opens the window empty.
+- Drop: a dropped file whose extension is not an article input (html, htm,
+  xhtml, md, markdown, txt, epub, url) opens the window with the file and
+  the line "This file is not an article ... Send it to the reader as it
+  is?". Article inputs convert as before. Several dropped files add to the
+  list.
+
+Window `Send a file` (`src/app/send_file.cpp`, state `App::sf`,
+`SendFileUi`): device line; file list with sizes and a remove button (one
+file: the remote name is editable); `add files...` and `clear`;
+destination folder (default = the device profile folder; quick buttons
+`/` and `device folder`; a hint when a `.bin` is not going to `/`); the
+checks (problems in red block Send, warnings in amber); `send file` /
+`send N files`; the job row (progress, cancel) of `JobKind::Send`; one
+result line per file; after a successful `.bin` the hint "On the reader:
+Settings > System > SD Card Firmware Update, then pick this file." (also
+as a toast); a collapsible "recent file sends" list.
+
+The job (`jobSendRawFiles`) sends the files one by one on one worker. Per
+file: read (files over 256 MB are not read), `net::sendRawFile(
+net::transport(method), profile, folder, file, progress, &cancel)`,
+`markConnected` on success, `net::addFileSend(record)`, then the same
+`postSendResult` as the article send (pill, toast, explain on failure).
+Cancel stops after the current file (the transport polls the flag between
+chunks, as for an article).
+
+Rules and history (`src/net/file_send.h/.cpp`, part of `ks_core`):
+
+- `makeRawFile(name, bytes)`: `OutputFile` with the name as given, MIME
+  from the extension (`application/octet-stream` for unknown, so `.bin`),
+  `format` from the extension (Epub when it is not an output format).
+- `sendNameProblem(name, method)`: empty, `/` or `\`, `.`/`..`, control
+  characters, more than 255 bytes (Bluetooth 200).
+- `checkFileSend(method, name, bytes)`: refuse 0 bytes and more than
+  256 MB (`kMaxSendFileBytes`) for every method; Bluetooth uses the
+  protocol rules (`ble::sizeProblem` refuse > 16 MB, `ble::sizeWarning`
+  warn > 3 MB) and adds `kBleFirmwareNote` (Wi-Fi is better for firmware)
+  for a `.bin`.
+- `withFolder(profile, folder)`: `normalizeFolder(folder)`, "" = the
+  profile folder. `sendRawFile` = check, then `Transport::send` with that
+  profile; a check problem returns an `unsupported` error and sends
+  nothing. Overwrite and verify are the transport's own behaviour (WebDAV
+  PUT overwrites; CrossPoint HTTP deletes and retries on "exists"; WS and
+  BLE as before).
+- History: `file_sends.json` in `dataDir()`, newest first, at most 200
+  records. A record is a `TransferRecord` with an empty `articleId`,
+  `fileName` = the remote path on success (else the file name), plus
+  `"kind": "file"` in the JSON. `addFileSend`, `listFileSends`,
+  `clearFileSends`. The library is not touched.
+
+UI test hook: `sendfile <path>` opens the window with that file without the
+native dialog (the `action send_file` command would block in the dialog).
+
+Tests: `test_file_send` (81 checks): article-input and firmware name
+detection, MIME, `OutputFile` shape, name rules, size rules (0, 256 MB,
+Bluetooth 3 MB warning / 16 MB refusal / firmware note), folder
+normalisation (`""`, `/`, `Books//Inbox`, `\fw\`), a recording fake
+`Transport` (folder and file passed through, refusals never reach the
+transport, cancel and failure come back), the real Folder transport
+(write, overwrite, nested folder), and the history (record shape, newest
+first, 200 cap, no library entry).
+
+Verified 2026-10-11: ctest 11/11; GUI driven through the hook with a USB
+folder profile (firmware.bin 1.5 MB to `/`, bytes identical, record in
+`file_sends.json`, firmware hint shown). Not verified: the native dialog
+by hand (it needs a user click), and a send of a real firmware image to a
+reader over Wi-Fi or Bluetooth.

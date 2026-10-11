@@ -1,14 +1,16 @@
 /**
  * IndexedDB access for k-rosspointSender.
- * Database "krosspoint", version 2.
- * Stores: articles, devices, settings, handles, packs.
+ * Database "krosspoint", version 3.
+ * Stores: articles, devices, settings, handles, packs, transfers.
  * Version 2 adds the "packs" store (key id, index updatedAt).
+ * Version 3 adds the "transfers" store (key id, index at): the log of
+ * sends that have no library entry, for example "Send a file".
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { AppSettings, DeviceProfile, LibraryEntry, Pack } from '../types';
+import type { AppSettings, DeviceProfile, LibraryEntry, Pack, TransferRecord } from '../types';
 
 export const DB_NAME = 'krosspoint';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export interface KrosspointDB extends DBSchema {
   articles: {
@@ -32,6 +34,11 @@ export interface KrosspointDB extends DBSchema {
     key: string;
     value: StoredPack;
     indexes: { updatedAt: string };
+  };
+  transfers: {
+    key: string;
+    value: TransferRecord;
+    indexes: { at: string };
   };
 }
 
@@ -76,6 +83,11 @@ export function getDb(): Promise<IDBPDatabase<KrosspointDB>> {
         if (!db.objectStoreNames.contains('packs')) {
           const packs = db.createObjectStore('packs', { keyPath: 'id' });
           packs.createIndex('updatedAt', 'updatedAt');
+        }
+        // Version 3: transfer log for sends without a library entry.
+        if (!db.objectStoreNames.contains('transfers')) {
+          const transfers = db.createObjectStore('transfers', { keyPath: 'id' });
+          transfers.createIndex('at', 'at');
         }
       },
     }).catch((err) => {

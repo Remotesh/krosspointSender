@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(krosspoint_desktop VERSION 1.0.0 LANGUAGES C CXX)
+project(krosspoint_desktop VERSION 1.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -59,7 +59,7 @@ target_link_libraries(ks_core PUBLIC
     CURL::libcurl LibXml2::LibXml2 ZLIB::ZLIB Threads::Threads
     ks_miniz ks_md4c ks_stb ks_json ks_httplib)
 if(WIN32)
-    target_link_libraries(ks_core PUBLIC ws2_32 iphlpapi)
+    target_link_libraries(ks_core PUBLIC ws2_32 iphlpapi ${KS_NET_LIBS})
     target_compile_definitions(ks_core PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 if(MSVC)
@@ -89,6 +89,10 @@ if(KS_BUILD_APP)
     target_link_libraries(krosspoint_sender PRIVATE ks_core ks_imgui)
     if(TARGET SDL2::SDL2main)
         target_link_libraries(krosspoint_sender PRIVATE SDL2::SDL2main)
+    endif()
+    if(WIN32)
+        # GetOpenFileNameW / GetSaveFileNameW (dialogs.cpp, "send a file").
+        target_link_libraries(krosspoint_sender PRIVATE comdlg32)
     endif()
     if(WIN32 AND MINGW)
         target_link_options(krosspoint_sender PRIVATE -static-libgcc -static-libstdc++)

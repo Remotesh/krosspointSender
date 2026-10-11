@@ -216,12 +216,14 @@ Rules:
 ```ts
 getTransport(method: TransferMethod): TransportAdapter
 listTransports(): TransportAdapter[]
-explainBlock(err: TransferError, origin: string): { title: string; reasons: string[]; fallbacks: string[] }
+explainBlock(err: TransferError, origin: string, method?: TransferMethod): { title: string; reasons: string[]; fallbacks: string[] }
 ```
 
 Adapters (one file each): `webdav.ts`, `crosspointHttp.ts`,
-`crosspointWs.ts`, `usb.ts`, `download.ts`, `opds.ts`, `bleMock.ts`,
+`crosspointWs.ts`, `usb.ts`, `download.ts`, `opds.ts`, `ble.ts`,
 `helper.ts` (talks to the optional local helper at `settings.helperUrl`).
+`bleMock.ts` is a simulated BLE adapter for tests and development only.
+`crc32.ts` holds the CRC-32 (IEEE 802.3) of the BLE protocol.
 
 Rules:
 - Base URL = `http://${host}:${port}`. If `location.protocol === 'https:'`
@@ -254,12 +256,41 @@ Rules:
 - `opds`: `send` builds a ZIP with `catalog.xml` (OPDS 1.2 Atom acquisition
   feed listing the file) + the EPUB, and downloads it. It also exports
   `buildOpdsCatalog(entries: {title, author, fileName, bytes, updated}[], baseUrl: string): string`.
-- `bleMock`: `isSupported()` returns `'bluetooth' in navigator`. `send` runs a
-  simulated pipeline (pair, metadata, chunks with progress, checksum,
-  commit) with no real radio. Document the future K-Reader BLE protocol in
-  the file header: service UUID placeholder, characteristics for
-  metadata/chunk/control/status, chunk size 244, CRC32 verify, commit to
-  `/Books/Inbox/`.
+- `ble` (method `'ble'`, UI label "Bluetooth (CrossPoint BLE mode)"):
+  the CrossPoint BLE file transfer protocol over Web Bluetooth. The binding
+  contract is `docs/BLE_PROTOCOL.md`. `isSupported()` returns
+  `'bluetooth' in navigator`.
+  - Layers: `BleLink` (connect(serviceUuid) -> {name, id}, readInfo,
+    writeMeta / writeControl with response, writeChunk without response,
+    subscribeStatus, onDisconnect, disconnect) and `BleTransport` (the
+    protocol). The default link is `WebBluetoothLink`. Tests inject a fake
+    link with `new BleTransport({ linkFactory })`.
+  - `send`: refuse > 16 MB before connecting (`TransferError('too-large')`),
+    warn > 3 MB with a progress message, CRC-32 of the file, connect,
+    subscribe STATUS, read INFO (optional), META, wait READY (5 s), stream
+    CHUNKs with the chunk size from READY and never more than 48 chunks
+    past the last ACK, wait ACK(fileSize) (10 s without an ACK fails),
+    VERIFY (CRC_OK / CRC_BAD), COMMIT, remote path from the COMMITTED text.
+    Any failure after META sends ABORT when the link is up. Progress =
+    last ACK offset / fileSize. AbortSignal ends the send with 'cancelled'
+    and ABORT.
+  - `testConnection` (the "Connect" button): connect, read INFO, PING, wait
+    for PONG. `info` holds `bleDeviceName`, `bleDeviceId`, `version`,
+    `freeKiB`, `maxChunkData`.
+  - User gesture: `requestDevice` works only during a click. The Connect
+    click chooses the reader. The `BluetoothDevice` is cached in memory per
+    profile id. `onBleDeviceChosen` lets the UI store `bleDeviceName` and
+    `bleDeviceId` in the profile. `send` order: cached device, then
+    `navigator.bluetooth.getDevices()` matched on `bleDeviceId` (no
+    prompt), then `requestDevice` (works when the Send click is still a
+    fresh user activation). When the browser refuses for lack of a
+    gesture: `TransferError('not-paired')`, "press Connect first".
+  - `explainBlock(err, origin, 'ble')` gives Bluetooth text (reader screen,
+    Chrome/Edge, firmware build) and the Wi-Fi / USB / download fallbacks,
+    not the mixed-content text.
+- `bleMock`: simulated pipeline, no radio. `getTransport('ble')` returns it
+  only in a dev build (`import.meta.env.DEV`) with `?blemock` in the URL or
+  localStorage `krosspoint.bleMock = "1"`.
 - `helper`: not in `TransferMethod`; get it with `getHelperTransport()`. It POSTs `${helperUrl}/send` multipart with `file`, `host`, `port`,
   `folder`, `method`. GET `${helperUrl}/status`.
 - Nothing fails silently. Every rejection is a `TransferError` with a human
@@ -379,7 +410,10 @@ Streams progress is out of scope. No logging of file contents.
   transfer record append, every adapter implements the interface and
   `send` rejects with TransferError on a mocked failing fetch, webdav
   uses PUT and crosspointHttp uses multipart POST (mock fetch and assert),
-  opds catalog XML validity, bleMock reaches `complete`.
+  opds catalog XML validity, bleMock reaches `complete`, and the BLE
+  protocol against a fake link (`tests/transports/ble.test.ts`: happy path,
+  ERROR out of order, CRC_BAD + ABORT, NO_SPACE, READY and ACK timeouts,
+  abort signal, 48-chunk window, chunk size from READY, size refusal).
 
 ## Verification done 2026-10-10
 
@@ -504,3 +538,24 @@ epubcheck.
   `makeRemoteFolder(profile, path, name)` for the crosspoint-http and webdav
   adapters.
 - Defaults: `/Books/K-rosspoint/`, method `crosspoint-http`.
+
+## Addendum 2026-10-11: Bluetooth transport and "Send a file" (1.1)
+
+- `transports/ble.ts` replaces the mock. It speaks the CrossPoint BLE file
+  transfer protocol in `docs/BLE_PROTOCOL.md` over Web Bluetooth. The mock
+  stays for tests and behind a dev flag. `DeviceProfile` gains optional
+  `bleDeviceName` and `bleDeviceId`. New error codes: `too-large`,
+  `not-paired`. READY timeout 15 s, ACK timeout 10 s, window 48 chunks.
+- "Send a file": `send/sendFile.ts` wraps any `File` as an `OutputFile`
+  with format `'file'` and sends it with the active transport, so a
+  firmware image can go to `/` and be installed from the reader's
+  Settings > System > SD Card Firmware Update. UI: `ui/sendFilePanel.ts`,
+  mounted at the bottom of the Device panel; non-article drops and pastes
+  are routed there.
+- Types: `SendFormat = OutputFormat | 'file'` is the type of
+  `OutputFile.format` and `TransferRecord.format`. `TransferRecord` gains
+  optional `kind` (`'article' | 'pack' | 'file'`) and `remotePath`; a file
+  send has `articleId: ''`.
+- Storage: DB version 3 adds a `transfers` store (`storage/transfers.ts`)
+  for sends that have no library article. The upgrade only adds the store.
+  `clearLibrary()` leaves it alone.

@@ -12,9 +12,13 @@ browser limits:
   `http://127.0.0.1:8134`, so the hosted app on k-engine.org can send over
   the LAN through it.
 - Drag a link, a file, or text onto the window. Or paste a copied web page.
-
-Bluetooth for the future K-Reader firmware has a mock transport and a
-protocol draft in `src/net/ble_mock.cpp`.
+- It sends over Bluetooth LE (Windows) to a CrossPoint build with
+  "Receive via Bluetooth" (ESP32-S3 boards such as the X4 Pro). On the
+  reader open File Transfer > Receive via Bluetooth. No pairing. The
+  protocol is `../docs/BLE_PROTOCOL.md`.
+- "Send a file..." (top bar, Ctrl+Shift+F, or drop a non-article file)
+  pushes any file to the SD card as it is, for example `firmware.bin` to
+  `/` for the reader's Settings > System > SD Card Firmware Update.
 
 ## Privacy
 
@@ -28,7 +32,7 @@ live in your user data folder (`%APPDATA%\krosspoint-sender` on Windows,
 ## Build (Windows, MSYS2 mingw64)
 
 ```
-pacman -S mingw-w64-x86_64-{toolchain,cmake,ninja,SDL2,curl,libxml2,zlib}
+pacman -S mingw-w64-x86_64-{toolchain,cmake,ninja,SDL2,curl,libxml2,zlib,cppwinrt}
 export PATH="/c/msys64/mingw64/bin:$PATH"
 cmake -S desktop -B desktop/build -G Ninja
 cmake --build desktop/build
@@ -39,8 +43,11 @@ The binary is `desktop/build/krosspoint_sender.exe`. It needs the mingw64
 runtime DLLs for SDL2, libcurl, libxml2 and zlib next to it, or on PATH.
 `scripts/package.sh` (if present) copies them into `desktop/dist/`.
 
+`cppwinrt` gives the C++/WinRT headers for the Bluetooth LE code
+(`src/net/ble_win.cpp`, compiled as C++20). It adds no DLL.
+
 Linux: install `libsdl2-dev libcurl4-openssl-dev libxml2-dev zlib1g-dev`,
-then the same CMake commands.
+then the same CMake commands. Bluetooth is not available there.
 
 ## Use
 
@@ -68,6 +75,8 @@ Settings under "spider packs".
 krosspoint_sender --pack "Steam engine" --out pack.epub [--depth 1] [--max 20] [--lang en]
 krosspoint_sender --convert <url-or-file> --out article.epub
 krosspoint_sender --send article.epub --host 192.168.1.50 [--port 80] [--folder /Books/K-rosspoint/] [--method webdav|http]
+krosspoint_sender --send article.epub --method ble [--ble AA:BB:CC:DD:EE:FF | --ble CrossPoint-3A7F]
+krosspoint_sender --discover        (LAN and Bluetooth)   --discover-ble   (Bluetooth only)
 krosspoint_sender --help
 ```
 

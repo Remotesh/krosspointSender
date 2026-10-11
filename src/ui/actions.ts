@@ -155,7 +155,7 @@ export async function saveToLibrary(
     const entry: LibraryEntry = {
       article,
       fileName: file.name,
-      lastFormat: file.format,
+      lastFormat: file.format === 'file' ? (old?.lastFormat ?? 'epub') : file.format,
       imageBlobs,
       transfers: old?.transfers ?? [],
       savedAt: old?.savedAt ?? now,

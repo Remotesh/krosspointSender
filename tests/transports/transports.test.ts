@@ -9,6 +9,8 @@ import {
   isMixedContent,
   normalizeFolder,
   crc32,
+  bleMockTransport,
+  bleTransport,
 } from '../../src/transports';
 import { networkError } from '../../src/transports/common';
 import { outputFile, profile, stubFetch, stubXhr, type MockResponseInit } from './mocks';
@@ -252,10 +254,15 @@ describe('crosspoint-http', () => {
 });
 
 describe('ble mock', () => {
+  it('is not the registered ble transport (dev flag only)', () => {
+    expect(getTransport('ble')).toBe(bleTransport);
+    expect(getTransport('ble')).not.toBe(bleMockTransport);
+  });
+
   it('reaches complete with progress events', async () => {
     const c = collector();
     const t0 = Date.now();
-    const res = await getTransport('ble').send(profile({ method: 'ble', firmware: 'kreader' }), outputFile('x'.repeat(5000)), c.cb);
+    const res = await bleMockTransport.send(profile({ method: 'ble', firmware: 'kreader' }), outputFile('x'.repeat(5000)), c.cb);
     expect(Date.now() - t0).toBeGreaterThanOrEqual(1000);
     expect(res.ok).toBe(true);
     expect(res.remotePath).toBe('/Books/K-rosspoint/My Book.epub');
@@ -270,7 +277,7 @@ describe('ble mock', () => {
   it('can be cancelled', async () => {
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 50);
-    const err = await getTransport('ble').send(profile(), outputFile(), () => {}, ctrl.signal).catch((e) => e);
+    const err = await bleMockTransport.send(profile(), outputFile(), () => {}, ctrl.signal).catch((e) => e);
     expect(err.code).toBe('cancelled');
   });
 

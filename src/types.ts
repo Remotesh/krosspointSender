@@ -125,12 +125,18 @@ export interface BuildOptions {
   includeSourceNote: boolean;
 }
 
-/** One generated output file. */
+/**
+ * Format of a file to send. 'file' is any file from disk, sent as it is
+ * ("Send a file", for example a firmware.bin). It is never built or converted.
+ */
+export type SendFormat = OutputFormat | 'file';
+
+/** One generated output file, or a file from disk ('file'). */
 export interface OutputFile {
   name: string;        // final filename with extension
   mime: string;
   blob: Blob;
-  format: OutputFormat;
+  format: SendFormat;
   /** Approximate page count on the X4 Pro at the chosen style. */
   estimatedPages?: number;
 }
@@ -146,7 +152,7 @@ export type TransferMethod =
   | 'usb'             // File System Access API folder write
   | 'download'        // manual browser download
   | 'opds'            // generate a local OPDS catalog package
-  | 'ble';            // future K-Reader BLE (mock for now)
+  | 'ble';            // CrossPoint BLE file transfer (Web Bluetooth, docs/BLE_PROTOCOL.md)
 
 export interface DeviceProfile {
   id: string;                 // uuid
@@ -161,6 +167,10 @@ export interface DeviceProfile {
   defaultFormat: OutputFormat;
   lastConnectedAt?: string;   // ISO date
   notes?: string;
+  /** method 'ble': advertised name of the paired reader, e.g. "CrossPoint-3A7F". */
+  bleDeviceName?: string;
+  /** method 'ble': Web Bluetooth BluetoothDevice.id (opaque, per origin). Used with getDevices() to reconnect without a prompt. */
+  bleDeviceId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -192,6 +202,8 @@ export type TransferErrorCode =
   | 'unsupported'      // browser lacks the API (File System Access, Bluetooth)
   | 'cancelled'        // user cancelled a picker
   | 'device'           // device returned an error
+  | 'too-large'        // file too big for this transport (BLE: over 16 MB)
+  | 'not-paired'       // BLE: no reader chosen yet; press Connect first (needs a user click)
   | 'unknown';
 
 export class TransferError extends Error {
@@ -238,14 +250,22 @@ export interface TransportAdapter {
 
 // ───────────────────────── Storage ─────────────────────────
 
+/** What a transfer sent. Undefined means 'article' (records from before this field). */
+export type TransferKind = 'article' | 'pack' | 'file';
+
 export interface TransferRecord {
   id: string;
+  /** Library article id. Empty for kind 'file' (no library entry). */
   articleId: string;
+  /** Undefined = 'article'. */
+  kind?: TransferKind;
   deviceId?: string;
   deviceName?: string;
   method: TransferMethod;
-  format: OutputFormat;
+  format: SendFormat;
   fileName: string;
+  /** Folder or full path on the device, when known. */
+  remotePath?: string;
   bytes: number;
   ok: boolean;
   error?: string;

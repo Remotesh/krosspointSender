@@ -215,6 +215,7 @@ void drawMenuBar(App& app) {
     if (ImGui::BeginMenu("file")) {
         if (ImGui::MenuItem("paste", shortcutLabel(app, Action::Paste))) pasteFromClipboard(app);
         if (ImGui::MenuItem("convert", shortcutLabel(app, Action::Convert))) convertCurrent(app);
+        if (ImGui::MenuItem("send a file...", shortcutLabel(app, Action::SendFile))) chooseFilesToSend(app);
         if (ImGui::MenuItem("export...", shortcutLabel(app, Action::Export), false, app.article.has_value()))
             exportNow(app);
         ImGui::Separator();

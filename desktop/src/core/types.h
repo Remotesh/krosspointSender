@@ -119,7 +119,7 @@ enum class TransferMethod {
     CrossPointHttp,  // POST /upload?path= multipart; rejects duplicates
     CrossPointWs,    // WebSocket upload on port 81
     Folder,          // write into a local folder (USB drive mode)
-    Ble              // future K-Reader BLE (mock for now)
+    Ble              // Bluetooth LE, CrossPoint "Receive via Bluetooth" (docs/BLE_PROTOCOL.md)
 };
 
 struct DeviceProfile {
@@ -137,6 +137,10 @@ struct DeviceProfile {
     std::string notes;
     std::string createdAt;
     std::string updatedAt;
+    // TransferMethod::Ble: the reader's 48-bit Bluetooth address (0 = not
+    // chosen; then the transport scans for bleName) and advertised name.
+    uint64_t bleAddress = 0;
+    std::string bleName;
 };
 
 enum class TransferState { Idle, Connecting, Uploading, Verifying, Complete, Failed };

@@ -451,7 +451,7 @@ void jobPackSend(App& app) {
         OutputFile f = currentFile(ctx, o, bo);
         TransferResult res = sendWithProgress(ctx, p, f);
         recordPack(ctx, o.pack.id, f.name, makeRecord(o.pack.id, p, f, res));
-        postSendResult(ctx, res, f.name, p.name);
+        postSendResult(ctx, res, f.name, p.name, p.method);
     });
 }
 
@@ -512,7 +512,7 @@ void jobPackSendStored(App& app, const std::string& id) {
         if (!s) return;
         TransferResult res = sendWithProgress(ctx, p, s->file);
         recordPack(ctx, id, s->file.name, makeRecord(id, p, s->file, res));
-        postSendResult(ctx, res, s->file.name, p.name);
+        postSendResult(ctx, res, s->file.name, p.name, p.method);
     });
 }
 

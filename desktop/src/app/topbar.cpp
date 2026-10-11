@@ -1,5 +1,5 @@
 // The right side of the menu bar: device combo (or "add device"), the send
-// button and the transfer pill. The device has no panel of its own; the
+// button, the "send a file..." button (send_file.cpp) and the transfer pill. The device has no panel of its own; the
 // devices window (win_devices.cpp) adds, tests and edits devices.
 #include "app/ui.h"
 
@@ -12,7 +12,9 @@ namespace ks::app {
 
 namespace {
 
-std::string profileLabel(const DeviceProfile& p) { return p.name + "  " + p.host; }
+std::string profileLabel(const DeviceProfile& p) {
+    return p.name + "  " + (p.method == TransferMethod::Ble ? deviceWhere(p) : p.host);
+}
 
 ImVec4 pillColor(TransferState s) {
     switch (s) {
@@ -110,8 +112,9 @@ void drawDeviceBar(App& app) {
                         : std::clamp(ImGui::CalcTextSize(cur.c_str()).x + ImGui::GetFrameHeight() + st.FramePadding.x * 3.f,
                                      ImGui::GetFontSize() * 10.f, ImGui::GetFontSize() * 18.f);
     float sendW = ui::ButtonWidth("send") + ImGui::GetFontSize();
+    float fileW = ui::ButtonWidth("send a file...");
     float pillW = std::max(pillWidth(pill), pillWidth("uploading 100%"));
-    float total = comboW + sendW + pillW + st.ItemSpacing.x * 3.f;
+    float total = comboW + sendW + fileW + pillW + st.ItemSpacing.x * 4.f;
     float x = ImGui::GetWindowContentRegionMax().x - total;
     if (x > ImGui::GetCursorPosX()) ImGui::SetCursorPosX(x);
 
@@ -161,6 +164,14 @@ void drawDeviceBar(App& app) {
                                     : "build the file and send it to the device";
         ImGui::SetTooltip("%s", why);
     }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(sending);
+    if (ImGui::Button("send a file...", ImVec2(fileW, 0))) chooseFilesToSend(app);
+    ImGui::EndDisabled();
+    if (ui::g_showTooltips && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("%s", sending ? "a transfer runs"
+                                        : "send any file from disk as it is (for example firmware.bin to / for the "
+                                          "reader's SD Card Firmware Update)");
     ImGui::SameLine();
     drawPill(app, pill);
 }

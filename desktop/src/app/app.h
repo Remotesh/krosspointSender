@@ -29,7 +29,7 @@ struct App;
 using UiTask = std::function<void(App&)>;
 
 // The kind of a job. The panels use it to show the matching spinner.
-enum class JobKind { Source, Images, Export, Send, Test, Discover, Library, Pack, Folder, Quiet };
+enum class JobKind { Source, Images, Export, Send, Test, Discover, BleScan, Library, Pack, Folder, Quiet };
 
 // Control block for one background job. The UI and the worker share it.
 struct JobCtl {
@@ -101,6 +101,8 @@ struct DeviceFlow {
     bool browseLoaded = false;
     std::string newFolderName = "K-rosspoint";
     bool newFolderOpen = false;
+    std::string bleAddrText;                    // the address field of a Bluetooth draft
+    int bleSel = -1;                            // selected row of App::bleFound
 };
 
 enum class SourceTab { Url, Wikipedia, Html, Text, Markdown, File, Pack };
@@ -138,6 +140,31 @@ struct PackUi {
     std::vector<PreviewLine> previewLines;
     int previewRev = 0;
     int rev = 0;                         // changes when the pack changes
+};
+
+// The "send a file" window (send_file.cpp): raw files from disk to the
+// reader, no conversion, no library article.
+struct SendFileItem {
+    std::string path;
+    std::string name;       // the remote name; editable for a single file
+    uint64_t size = 0;
+    bool readable = true;
+};
+struct SendFileUi {
+    bool open = false;
+    bool focus = false;                  // bring the window to the front once
+    bool dropped = false;                // opened by a drop of a non-article file
+    std::vector<SendFileItem> items;
+    std::string folder;                  // "" until opened; then the profile folder
+    std::string profileFolder;           // the folder of the device when opened
+    // The result of the last run.
+    int sent = 0, failed = 0;
+    bool finished = false;
+    bool cancelled = false;
+    bool firmwareSent = false;           // a .bin arrived: show the reader hint
+    std::vector<std::string> lines;      // one line per file
+    std::vector<TransferRecord> recent;  // file_sends.json, newest first
+    bool recentLoaded = false;
 };
 
 enum class ToastKind { Info, Warn, Error };
@@ -210,7 +237,11 @@ struct App {
     std::optional<ConnectionTestResult> testResult;
     std::vector<net::Discovered> discovered;
     bool discoverDone = false;
+    std::vector<net::BleDiscovered> bleFound;   // Bluetooth readers from the last scan
+    bool bleScanDone = false;
+    std::string bleScanError;
     DeviceFlow dev;
+    SendFileUi sf;
 
     // ---------------------------------------------------------- windows
     bool showLibrary = false, showSettings = false, showDevices = false, showLog = false;
@@ -263,6 +294,8 @@ std::string methodLabel(TransferMethod m);
 std::string formatLabel(OutputFormat f);
 std::string stateLabel(TransferState s);
 std::string humanBytes(uint64_t n);
+// Where a device is: host:port, the drive for Folder, or the Bluetooth name and address.
+std::string deviceWhere(const DeviceProfile& p);
 std::string clockTime();
 double appClock();   // seconds since start, steady
 // Wake the event loop from any thread (k-os request_frame). Safe to call
@@ -287,11 +320,14 @@ void jobTest(App& app, const DeviceProfile& p, TestTarget target);
 // Send the test EPUB to the draft. On success save it, mark it connected,
 // make it the default device and show the compact device strip.
 void jobConfirmDevice(App& app, const DeviceProfile& draft);
-std::string testKey(const DeviceProfile& p);   // host:port:method
+std::string testKey(const DeviceProfile& p);   // host:port:method (Bluetooth: address:method)
 void jobDiscover(App& app);
 // Send one file with a progress callback that posts to the UI (jobs.cpp).
 TransferResult sendWithProgress(const JobCtx& ctx, const DeviceProfile& p, const OutputFile& f);
-void postSendResult(const JobCtx& ctx, const TransferResult& res, const std::string& name, const std::string& device);
+void postSendResult(const JobCtx& ctx, const TransferResult& res, const std::string& name, const std::string& device,
+                    TransferMethod method = TransferMethod::WebDav);
+// Scan for CrossPoint readers over Bluetooth LE (about 4 s); fills App::bleFound.
+void jobDiscoverBle(App& app);
 TransferRecord makeRecord(const std::string& articleId, const DeviceProfile& p, const OutputFile& f,
                           const TransferResult& res);
 
@@ -318,6 +354,16 @@ PackStats packStats(const Pack& p, const StyleSettings& style);
 bool packShown(const PackPage& p);   // selected, done or failed
 // Start a new pack: back to step 1 with the default limits.
 void packRestart(App& app);
+
+// ---------------------------------------------------------- send a file (send_file.cpp)
+// Open the native multi-select dialog, then the send-file window.
+void chooseFilesToSend(App& app);
+// Open the send-file window with these files (added to the list when the
+// window is open and idle). dropped: the files came from a drop.
+void openSendFile(App& app, const std::vector<std::string>& paths, bool dropped = false);
+// Send the listed files one by one to the current device.
+void jobSendRawFiles(App& app);
+void drawSendFileWindow(App& app);
 
 // ---------------------------------------------------------- folder browser (folder_browser.cpp)
 void drawFolderBrowser(App& app, DeviceProfile& d);
@@ -382,6 +428,10 @@ std::optional<std::string> openFileDialogFiltered(const std::string& title, cons
 std::optional<std::string> saveFileDialogFiltered(const std::string& title, const std::string& filterDesc,
                                                   const std::string& pattern, const std::string& defaultPath);
 std::optional<std::string> pickFolderDialog(const std::string& title);
+// Multi-select open dialog for any file (GetOpenFileNameW with
+// OFN_ALLOWMULTISELECT). Empty when cancelled. supported is false on a
+// platform without a native dialog.
+std::vector<std::string> openFilesDialog(const std::string& title, bool* supported = nullptr);
 void openFolder(const std::string& path);
 struct ClipboardContent {
     std::string html;        // CF_HTML document, empty when none

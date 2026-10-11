@@ -331,7 +331,7 @@ void drawAbout(App& app) {
     if (!header("About", "version license credits")) return;
     ImGui::TextColored(theme::Amber, "k-rosspointSender");
     ImGui::SameLine();
-    ImGui::TextDisabled("desktop-1.0, imgui %s", IMGUI_VERSION);
+    ImGui::TextDisabled("desktop-1.1, imgui %s", IMGUI_VERSION);
     ui::Hint("Articles to EPUB for the Xteink X4 / CrossPoint reader. No telemetry.");
     ImGui::TextDisabled("ui prefs: %s", prefsPath().c_str());
     ImGui::TextDisabled("font: %s%s", app.fontName.c_str(), app.fontsCrisp ? " (ttf)" : "");

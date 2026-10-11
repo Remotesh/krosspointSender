@@ -11,6 +11,7 @@
 //   key <name>           press one key: enter, tab, escape, backspace,
 //                        ctrl+a (select all)
 //   shot <file.png>      write a screenshot of the window after the next frame
+//   sendfile <path>      open the "send a file" window with this file (no dialog)
 // Without KS_UI_TEST this file does nothing.
 #include "app/ui.h"
 
@@ -121,6 +122,11 @@ void runCommand(App& app, const std::string& line) {
         std::string rest;
         std::getline(in, rest);
         g_shotPath = trim(rest);
+    } else if (cmd == "sendfile") {
+        std::string rest;
+        std::getline(in, rest);
+        rest = trim(rest);
+        openSendFile(app, rest.empty() ? std::vector<std::string>{} : std::vector<std::string>{rest});
     } else if (cmd == "action") {
         std::string id;
         in >> id;

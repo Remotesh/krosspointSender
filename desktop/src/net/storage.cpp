@@ -37,7 +37,9 @@ json profileToJson(const DeviceProfile& p) {
             {"lastConnectedAt", p.lastConnectedAt},
             {"notes", p.notes},
             {"createdAt", p.createdAt},
-            {"updatedAt", p.updatedAt}};
+            {"updatedAt", p.updatedAt},
+            {"bleAddress", formatBleAddress(p.bleAddress)},
+            {"bleName", p.bleName}};
 }
 
 DeviceProfile profileFromJson(const json& j) {
@@ -56,6 +58,11 @@ DeviceProfile profileFromJson(const json& j) {
     p.notes = get<std::string>(j, "notes", "");
     p.createdAt = get<std::string>(j, "createdAt", "");
     p.updatedAt = get<std::string>(j, "updatedAt", "");
+    if (j.is_object() && j.contains("bleAddress") && j["bleAddress"].is_number_unsigned())
+        p.bleAddress = j["bleAddress"].get<uint64_t>();
+    else
+        p.bleAddress = parseBleAddress(get<std::string>(j, "bleAddress", "")).value_or(0);
+    p.bleName = get<std::string>(j, "bleName", "");
     return p;
 }
 

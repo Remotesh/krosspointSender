@@ -222,6 +222,38 @@ The OPDS method builds a ZIP with an OPDS catalog XML and the EPUB. Serve the
 unzipped folder with any static web server on your LAN. Add that URL in
 CrossPoint under Settings > OPDS. The device can then browse and download.
 
+### Send a file
+
+"Send a file" puts any file from your disk on the SD card, as it is. The
+app does not convert it. Open it in the Device panel (Device > Send a file).
+
+1. Choose one or more files. The app sends them in turn.
+2. Set the destination folder. The default is the target folder of the
+   active device. The "/" button sets the card root.
+3. Change the file name if necessary (one file only).
+4. Press "Send file". The status line of the Device panel shows the progress.
+   "Cancel" stops the send.
+
+The send uses the transport of the active device: the same folder rules,
+overwrite rules, verification and cancel as an article send. For example,
+CrossPoint HTTP upload refuses a file that already exists. WebDAV replaces it.
+The app records each send in the transfer log (kind `file`). It does not
+make a library entry. Files over 256 MB are refused.
+
+If you drop a file that is not an article (not HTML, Markdown or TXT) on the
+Source panel, the app does not try to convert it. It opens "Send a file"
+with that file.
+
+**Firmware update without removing the SD card:**
+
+1. Send `firmware.bin` to `/`.
+2. On the reader, open Settings > System > SD Card Firmware Update.
+3. Pick the file.
+
+After a `.bin` file is sent, the app shows this menu path. Use Wi-Fi or USB
+for firmware. Bluetooth shows a warning for files over 3 MB and refuses files
+over 16 MB.
+
 ## Run locally
 
 ```
@@ -254,19 +286,36 @@ file to the device over WebDAV or CrossPoint HTTP. It avoids the browser's
 mixed-content and private-network rules. It stores nothing and logs no
 content. Set the helper URL in Settings. See `helper/README.md`.
 
-## Future K-Reader BLE support
+## Bluetooth
 
-K-Reader is a future firmware. Its transfer path will use Web Bluetooth:
+The "Bluetooth (CrossPoint BLE mode)" method sends with Web Bluetooth. The
+protocol is in `docs/BLE_PROTOCOL.md`. It needs the CrossPoint firmware
+build with Bluetooth file transfer (branch `ble-transfer`, ESP32-S3 boards
+such as the X4 Pro). Stock CrossPoint has no Bluetooth transfer.
 
-1. Pair the device.
-2. Begin a transfer and send metadata (filename, size, CRC32).
-3. Send EPUB bytes in chunks with progress.
-4. Retry failed chunks.
-5. Verify the checksum.
-6. Commit the file to `/Books/K-rosspoint/`.
+- Browser: Chrome or Edge (desktop or Android). Firefox and Safari have no
+  Web Bluetooth.
+- Origin: works from `https://k-engine.org` and from a copy of the page
+  opened from your disk. The Wi-Fi mixed-content block does not apply.
+- Speed: about 10 to 50 KB/s. Good for articles. Files over 3 MB show a
+  warning. Files over 16 MB are refused (use Wi-Fi or USB).
 
-The app ships a mock BLE adapter that runs this pipeline without a radio.
-The protocol draft is in `src/transports/bleMock.ts`.
+Steps:
+
+1. On the reader: File Transfer > Receive via Bluetooth. The screen shows
+   the name, for example `CrossPoint-3A7F`.
+2. Devices > Add Device. Choose "Bluetooth (CrossPoint BLE mode)". No host
+   is needed.
+3. Press Connect. The browser shows its Bluetooth window. Choose the
+   reader. The app stores the reader name and the browser's device id in the
+   profile.
+4. Send. The app uses the reader chosen in step 3. After a page reload it
+   finds the reader again with `navigator.bluetooth.getDevices()` when the
+   browser supports it. If it cannot, it shows the Bluetooth window on the
+   Send click, or asks you to press Connect again.
+
+The browser shows the Bluetooth window only during a click. That is why
+Connect comes first.
 
 ## Deploy on k-engine.org
 
@@ -311,7 +360,7 @@ Layout:
 src/extractors/     URL normalize, fetch, Readability, Wikipedia, sanitize
 src/converters/     HTML/TXT/MD/ZIP builders, filenames, images, estimates
 src/epub/           EPUB builder, presets, CSS, bundles, test EPUB
-src/transports/     WebDAV, CrossPoint HTTP/WS, USB, download, OPDS, BLE mock, helper
+src/transports/     WebDAV, CrossPoint HTTP/WS, USB, download, OPDS, Bluetooth (+ dev mock), helper
 src/storage/        IndexedDB library and handles
 src/deviceProfiles/ profiles
 src/settings/       app settings

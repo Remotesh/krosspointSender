@@ -238,6 +238,7 @@ int runGui() {
         drawSettingsWindow(app);
         drawDevicesWindow(app);
         drawLogWindow(app);
+        drawSendFileWindow(app);
         drawToasts(app);
         ImGui::Render();
         glViewport(0, 0, static_cast<int>(io.DisplaySize.x * io.DisplayFramebufferScale.x),

@@ -80,8 +80,9 @@ describe('packs store', () => {
     await old.put('articles', oldArticle('old-1'));
     old.close();
     const db = await getDb();
-    expect(db.version).toBe(2);
+    expect(db.version).toBe(3);
     expect(Array.from(db.objectStoreNames)).toContain('packs');
+    expect(Array.from(db.objectStoreNames)).toContain('transfers');
     expect(Array.from(db.transaction('packs').store.indexNames)).toContain('updatedAt');
     expect((await getArticle('old-1'))?.article.title).toBe('Old');
   });

@@ -31,9 +31,24 @@ DeviceProfile newDraft(const net::Discovered* d) {
     return p;
 }
 
+// A new Bluetooth profile for the add form, from a scan result.
+DeviceProfile newBleDraft(const net::BleDiscovered& d) {
+    DeviceProfile p = net::defaultProfile(FirmwareType::CrossPoint);
+    p.name = d.name.empty() ? "X4 Pro (Bluetooth)" : d.name;
+    p.host = "";
+    p.method = TransferMethod::Ble;
+    p.bleAddress = d.address;
+    p.bleName = d.name;
+    p.targetFolder = "/Books/K-rosspoint/";
+    return p;
+}
+
+// Where the saved device is, for the list rows.
+std::string whereShort(const DeviceProfile& p) { return p.method == TransferMethod::Ble ? deviceWhere(p) : p.host; }
+
 // Title, message and reasons of a failure, without the fallback buttons.
-void compactExplain(const TransferError& e) {
-    net::Explanation ex = net::explain(e);
+void compactExplain(const TransferError& e, TransferMethod m = TransferMethod::WebDav) {
+    net::Explanation ex = net::explain(e, m);
     ImGui::TextColored(theme::Error, "%s", ex.title.c_str());
     ui::Hint(e.message.c_str());
     if (!ex.reasons.empty()) ui::Bullets(ex.reasons);
@@ -53,7 +68,7 @@ void deletePopup(App& app) {
     if (!ImGui::BeginPopupModal("delete device?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
     std::string name = app.dev.deleteId;
     for (auto& p : app.profiles)
-        if (p.id == app.dev.deleteId) name = p.name + " (" + p.host + ")";
+        if (p.id == app.dev.deleteId) name = p.name + " (" + whereShort(p) + ")";
     ImGui::Text("delete device %s?", name.c_str());
     if (ImGui::Button("delete")) {
         try {
@@ -125,6 +140,68 @@ void drawFound(App& app, bool busy) {
     ImGui::EndListBox();
 }
 
+// The Bluetooth readers of the last scan. Each row: name, address, rssi, add.
+void drawBleFound(App& app) {
+    DeviceFlow& f = app.dev;
+    bool busy = app.busy(JobKind::BleScan);
+    ui::SectionGap();
+    ui::HeadingText("found over bluetooth");
+    char label[32];
+    std::snprintf(label, sizeof label, busy ? "bluetooth %c###blescan" : "bluetooth###blescan", ui::SpinnerChar());
+    float bw = ui::ButtonWidth("bluetooth |");
+    ui::RightAlign(bw);
+    ImGui::BeginDisabled(busy || !net::bleSupported());
+    if (ImGui::Button(label, ImVec2(bw, 0))) jobDiscoverBle(app);
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && ui::g_showTooltips)
+        ImGui::SetTooltip("%s", net::bleSupported() ? "Scan 4 s for CrossPoint readers over Bluetooth LE."
+                                                    : "Bluetooth needs the Windows build.");
+    ImGui::Separator();
+    ui::Hint(net::kBleReaderHint);
+    if (f.bleSel >= static_cast<int>(app.bleFound.size())) f.bleSel = -1;
+    float rowH = ImGui::GetFrameHeightWithSpacing();
+    int rows = std::clamp(static_cast<int>(app.bleFound.size()), 1, 4);
+    if (!ImGui::BeginListBox("##blefound", ImVec2(-1.f, rowH * static_cast<float>(rows) + 6.f))) return;
+    if (busy) {
+        ui::Spinner();
+        ImGui::SameLine();
+        ImGui::TextDisabled("scanning...");
+    } else if (!app.bleScanError.empty()) {
+        ImGui::TextColored(theme::Error, "%s", app.bleScanError.c_str());
+    } else if (app.bleFound.empty()) {
+        ImGui::TextDisabled(app.bleScanDone ? "no reader found" : "press bluetooth");
+    }
+    float addW = ui::ButtonWidth("add");
+    for (size_t i = 0; i < app.bleFound.size(); ++i) {
+        const net::BleDiscovered& d = app.bleFound[i];
+        ImGui::PushID(static_cast<int>(i));
+        float w = ImGui::GetContentRegionAvail().x - addW - ImGui::GetStyle().ItemSpacing.x;
+        bool sel = f.bleSel == static_cast<int>(i);
+        std::string addr = net::formatBleAddress(d.address);
+        char rssi[16];
+        std::snprintf(rssi, sizeof rssi, "%d dBm", d.rssi);
+        if (ImGui::Selectable("##blerow", sel, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(w, 0))) {
+            f.bleSel = static_cast<int>(i);
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) openDeviceForm(app, newBleDraft(d), false);
+        }
+        ImVec2 r0 = ImGui::GetItemRectMin(), r1 = ImGui::GetItemRectMax();
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        float sp = ImGui::GetStyle().ItemSpacing.x;
+        float rx = r1.x - ImGui::CalcTextSize(rssi).x - sp;
+        float ty = r0.y + (r1.y - r0.y - ImGui::GetTextLineHeight()) * 0.5f;
+        dl->AddText(ImVec2(rx, ty), ImGui::GetColorU32(theme::Dim), rssi);
+        dl->PushClipRect(r0, ImVec2(rx - sp, r1.y), true);
+        dl->AddText(ImVec2(r0.x, ty), ImGui::GetColorU32(sel ? theme::Amber : theme::Fg), d.name.c_str());
+        float ax = r0.x + ImGui::CalcTextSize(d.name.c_str()).x + sp * 2.f;
+        dl->AddText(ImVec2(ax, ty), ImGui::GetColorU32(theme::Dim), addr.c_str());
+        dl->PopClipRect();
+        ImGui::SameLine();
+        if (ImGui::SmallButton("add")) openDeviceForm(app, newBleDraft(d), false);
+        ImGui::PopID();
+    }
+    ImGui::EndListBox();
+}
+
 // The saved profiles. Each row: name, host, state, then use / edit /
 // delete and a "..." popup with the tools (test, send test epub).
 void drawSaved(App& app) {
@@ -144,7 +221,7 @@ void drawSaved(App& app) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextColored(cur ? theme::Amber : theme::Fg, "%s", p.name.c_str());
         ImGui::SameLine();
-        ImGui::TextDisabled("%s", p.host.c_str());
+        ImGui::TextDisabled("%s", whereShort(p).c_str());
         ImGui::SameLine();
         ImGui::TextColored(ok ? theme::Live : theme::Dim, "%s", ok ? "confirmed" : "unconfirmed");
         ui::RightAlign(ui::ButtonsWidth({"use", "edit", "delete", "..."}, true));
@@ -176,7 +253,12 @@ void drawSaved(App& app) {
     ui::JobRow(app, JobKind::Send);
     if (app.testResult && !testing) {
         if (app.testResult->ok) ImGui::TextColored(theme::Live, "connected (%d ms)", app.testResult->latencyMs);
-        else if (app.testResult->error) compactExplain(*app.testResult->error);
+        else if (app.testResult->error) {
+            TransferMethod m = TransferMethod::WebDav;
+            for (auto& p : app.profiles)
+                if (p.id == app.profileId) m = p.method;
+            compactExplain(*app.testResult->error, m);
+        }
     }
     if (wantDelete) ImGui::OpenPopup("delete device?");
 }
@@ -195,6 +277,7 @@ void openDeviceForm(App& app, const DeviceProfile& p, bool editing) {
     app.dev.newFolderOpen = false;
     app.dev.browseEntries.clear();
     app.dev.browseError.clear();
+    app.dev.bleAddrText = net::formatBleAddress(p.bleAddress);
     app.lastError.reset();
 }
 
@@ -227,6 +310,7 @@ void drawDeviceList(App& app) {
         f.discoverSel >= 0 ? &app.discovered[static_cast<size_t>(f.discoverSel)] : nullptr;
     if (ui::PrimaryButton(sel ? "add the selected device" : "add a device by address", ImGui::GetFrameHeight() * 1.4f))
         openDeviceForm(app, newDraft(sel), false);
+    drawBleFound(app);
     drawSaved(app);
     deletePopup(app);
 }
@@ -247,8 +331,16 @@ void drawDeviceForm(App& app) {
     ImGui::PushItemWidth(-ImGui::GetFontSize() * 4.5f);
     ui::InputStr("name", d.name);
     bool folder = d.method == TransferMethod::Folder;
-    ui::InputStrHint(folder ? "drive" : "host", folder ? "E:/" : "crosspoint.local or 192.168.x.x", d.host);
-    if (!folder) ImGui::InputInt("port", &d.port, 0, 0);
+    bool ble = d.method == TransferMethod::Ble;
+    if (ble) {
+        // Bluetooth: the reader address (from the scan, or typed) and its name.
+        if (ui::InputStrHint("address", "AA:BB:CC:DD:EE:FF", f.bleAddrText))
+            d.bleAddress = net::parseBleAddress(f.bleAddrText).value_or(0);
+        ui::InputStrHint("reader", "CrossPoint-XXXX", d.bleName);
+    } else {
+        ui::InputStrHint(folder ? "drive" : "host", folder ? "E:/" : "crosspoint.local or 192.168.x.x", d.host);
+        if (!folder) ImGui::InputInt("port", &d.port, 0, 0);
+    }
     ui::EnumCombo("method", d.method, ui::methodItems());
     // CrossPoint HTTP and WebDAV get the folder browser below. The other
     // methods cannot list folders: a text field only.
@@ -269,6 +361,9 @@ void drawDeviceForm(App& app) {
         ImGui::TreePop();
     }
     ImGui::PopItemWidth();
+    if (ble)
+        ui::Hint((std::string(net::kBleReaderHint) + ". The address comes from bluetooth in the device list; "
+                  "with no address the app scans for the reader name.").c_str());
     if (folder && ImGui::SmallButton("browse...")) {
         if (auto dir = pickFolderDialog("Choose the reader drive")) d.host = *dir;
     }
@@ -278,6 +373,10 @@ void drawDeviceForm(App& app) {
     ImGui::BeginDisabled(testing || sending);
     if (ImGui::Button("test")) {
         f.problems = net::validateProfile(d);
+        if (ble && !f.bleAddrText.empty() && !d.bleAddress)
+            f.problems.push_back("The Bluetooth address must be 6 hex bytes, for example AA:BB:CC:DD:EE:FF.");
+        else if (ble && !d.bleAddress && trim(d.bleName).empty())
+            f.problems.push_back("Choose a Bluetooth reader: press bluetooth in the device list, or type its address.");
         if (f.problems.empty()) {
             // Test a copy without the id: only confirm may mark the device.
             DeviceProfile probe = d;
@@ -293,6 +392,8 @@ void drawDeviceForm(App& app) {
     ImGui::PushStyleColor(ImGuiCol_Text, testOk ? theme::Bg : ImGui::GetStyleColorVec4(ImGuiCol_Text));
     if (ImGui::Button("confirm")) {
         f.problems = net::validateProfile(d);
+        if (ble && !d.bleAddress && trim(d.bleName).empty())
+            f.problems.push_back("Choose a Bluetooth reader: press bluetooth in the device list, or type its address.");
         if (f.problems.empty()) jobConfirmDevice(app, d);
     }
     ImGui::PopStyleColor(2);
@@ -310,7 +411,7 @@ void drawDeviceForm(App& app) {
     if (f.test && !testing) {
         if (f.testedKey != testKey(d)) ImGui::TextDisabled("the address changed. test again.");
         else if (f.test->ok) ImGui::TextColored(theme::Live, "connected (%d ms). now confirm.", f.test->latencyMs);
-        else if (f.test->error) compactExplain(*f.test->error);
+        else if (f.test->error) compactExplain(*f.test->error, d.method);
         else ImGui::TextColored(theme::Error, "test failed");
     }
     if (sending) {
@@ -320,7 +421,7 @@ void drawDeviceForm(App& app) {
         ui::JobRow(app, JobKind::Send);
     } else if (app.lastError && testOk) {
         ImGui::TextColored(theme::Error, "the test epub did not arrive");
-        compactExplain(*app.lastError);
+        compactExplain(*app.lastError, d.method);
     }
     if (!f.problems.empty()) ui::Bullets(f.problems, &theme::Error);
 }

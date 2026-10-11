@@ -8,7 +8,7 @@ Transport& webdavTransport();
 Transport& crosspointHttpTransport();
 Transport& crosspointWsTransport();
 Transport& folderTransport();
-Transport& bleMockTransport();
+Transport& bleTransport();
 } // namespace detail
 
 Transport& transport(TransferMethod m) {
@@ -17,7 +17,7 @@ Transport& transport(TransferMethod m) {
         case TransferMethod::CrossPointHttp: return detail::crosspointHttpTransport();
         case TransferMethod::CrossPointWs: return detail::crosspointWsTransport();
         case TransferMethod::Folder: return detail::folderTransport();
-        case TransferMethod::Ble: return detail::bleMockTransport();
+        case TransferMethod::Ble: return detail::bleTransport();
     }
     return detail::webdavTransport();
 }

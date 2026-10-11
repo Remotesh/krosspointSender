@@ -36,7 +36,7 @@ import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 DEFAULT_PORT = 8134
 MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # 200 MiB
 CONNECT_TIMEOUT = 5.0

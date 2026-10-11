@@ -10,6 +10,8 @@ import { renderBookmarkletPanel } from './bookmarkletPanel';
 import { mountPackWizard } from './packWizard';
 import { store } from './state';
 import { toast } from './toast';
+import { offerSendFile } from './sendFilePanel';
+import { isArticleFile } from '../send';
 
 export type SourceTab = 'url' | 'wikipedia' | 'html' | 'text' | 'markdown' | 'file' | 'bookmarklet' | 'pack';
 
@@ -202,7 +204,7 @@ export function mountSourcePanel(root: HTMLElement): SourcePanel {
     h(
       'div',
       { class: 'tab-body' },
-      field('Choose a file', fileInput, 'HTML, Markdown or TXT. You can also drop a file anywhere on this panel.'),
+      field('Choose a file', fileInput, 'HTML, Markdown or TXT. You can also drop a file anywhere on this panel. Other files (for example firmware.bin) go to Device > Send a file.'),
       h('div', { class: 'drop-hint' }, 'Drop a file here'),
     ),
   );
@@ -262,8 +264,21 @@ export function mountSourcePanel(root: HTMLElement): SourcePanel {
       });
     },
     loadFiles(files) {
-      const file = Array.from(files)[0];
+      const all = Array.from(files);
+      const file = all[0];
       if (!file) return;
+      // A file that is not an article (firmware.bin, .epub, an image): do not
+      // convert it. Offer the "Send a file" section in the Device panel.
+      if (!isArticleFile(file)) {
+        const others = all.filter((f) => !isArticleFile(f));
+        offerSendFile(others);
+        toast(
+          `${file.name} is not an article. It is ready in Device > Send a file: press Send file to put it on the reader as it is.`,
+          'info',
+          6000,
+        );
+        return;
+      }
       if (files.length > 1) toast('Only the first file is used.', 'info');
       fileToInput(file)
         .then((input) => runExtract(input))

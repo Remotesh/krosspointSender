@@ -912,6 +912,13 @@ static void testWebSocket(FakeDevice& dev) {
     CHECK_EQ(wsPort(), 81);
 }
 
+static ks::TransferError makeErrorForTest(ks::TransferErrorCode c, const std::string& m) {
+    ks::TransferError e;
+    e.code = c;
+    e.message = m;
+    return e;
+}
+
 static void testFolderAndBle() {
     using namespace ks::net;
     std::string root = joinPath(dataDir(), "usb-drive");
@@ -933,31 +940,31 @@ static void testFolderAndBle() {
     r = t.send(p, f, nullptr);
     CHECK(!r.ok && r.error && r.error->code == TransferErrorCode::NotFound);
 
+    // Bluetooth LE: the real transport (the protocol itself is in test_ble).
+    // These checks never touch the radio: they fail before any scan.
     auto& ble = transport(TransferMethod::Ble);
-    p.targetFolder = "/Books/K-rosspoint/";
+    CHECK(ble.method() == TransferMethod::Ble);
+    CHECK(!ble.limitations().empty());
+    DeviceProfile bp = defaultProfile(FirmwareType::CrossPoint);
+    bp.method = TransferMethod::Ble;
+    bp.host = "";
     Recorder br;
-    auto t0 = std::chrono::steady_clock::now();
-    r = ble.send(p, makeFile("ble.epub", 10000), br.fn());
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-    CHECK(r.ok);
-    CHECK_EQ(r.remotePath, std::string("/Books/K-rosspoint/ble.epub"));
-    CHECK(ms >= 1000 && ms < 3000);
-    int uploads = 0;
-    for (auto& e : br.events)
-        if (e.state == TransferState::Uploading) ++uploads;
-    CHECK_EQ(uploads, 16);
-    CHECK(br.saw(TransferState::Verifying));
-    CHECK(br.last() == TransferState::Complete);
-
-    // Cancel in the middle.
-    bool cancel = false;
-    std::thread stopper([&] {
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
-        cancel = true;
-    });
-    r = ble.send(p, makeFile("ble.epub", 10000), nullptr, &cancel);
-    stopper.join();
-    CHECK(!r.ok && r.error && r.error->code == TransferErrorCode::Cancelled);
+    r = ble.send(bp, makeFile("big.epub", 16 * 1024 * 1024 + 1), br.fn());   // refused before connecting
+    CHECK(!r.ok && r.error && r.error->code == TransferErrorCode::Unsupported);
+    CHECK(br.last() == TransferState::Failed);
+    CHECK(!br.saw(TransferState::Connecting));
+    if (ble.isSupported()) {
+        // No address and no name: a clear error, no scan.
+        r = ble.send(bp, makeFile("ble.epub", 10000), nullptr);
+        CHECK(!r.ok && r.error && r.error->code == TransferErrorCode::NotFound);
+        auto tr = ble.testConnection(bp);
+        CHECK(!tr.ok && tr.error && tr.error->code == TransferErrorCode::NotFound);
+    } else {
+        r = ble.send(bp, makeFile("ble.epub", 10000), nullptr);
+        CHECK(!r.ok && r.error && r.error->code == TransferErrorCode::Unsupported);
+    }
+    auto bx = explain(makeErrorForTest(TransferErrorCode::Network, "x"), TransferMethod::Ble);
+    CHECK(bx.title.find("Bluetooth") != std::string::npos);
 }
 
 static void testNetworkError() {
@@ -993,7 +1000,7 @@ static void testHelper(FakeDevice& dev) {
     CHECK(st && st->status == 200);
     if (st) {
         auto j = json::parse(st->body, nullptr, false);
-        CHECK(j.is_object() && j.value("ok", false) && j.value("version", std::string()) == "desktop-1.0");
+        CHECK(j.is_object() && j.value("ok", false) && j.value("version", std::string()) == "desktop-1.1");
     }
 
     // CORS preflight.

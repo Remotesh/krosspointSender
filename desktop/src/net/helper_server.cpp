@@ -21,7 +21,7 @@ namespace ks::net {
 
 namespace {
 
-constexpr const char* kVersion = "desktop-1.0";
+constexpr const char* kVersion = "desktop-1.1";
 constexpr size_t kMaxUpload = 200u * 1024u * 1024u;
 
 struct HelperFail {

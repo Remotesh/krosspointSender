@@ -26,6 +26,7 @@ const ActionDef kDefs[kActionCount] = {
     {"paste", "paste from the clipboard", C | SDL_SCANCODE_V},
     {"export", "export...", C | SDL_SCANCODE_E},
     {"send", "send to the device", C | S | SDL_SCANCODE_S},
+    {"send_file", "send a file from disk to the device", C | S | SDL_SCANCODE_F},
     {"discover", "discover devices", C | SDL_SCANCODE_D},
     {"open_library", "library window", C | SDL_SCANCODE_B},
     {"open_settings", "settings window", C | SDL_SCANCODE_COMMA},
@@ -99,6 +100,7 @@ void runAction(App& app, Action a, bool& quit) {
             if (!app.busy(JobKind::Send)) jobSend(app);
             if (!app.sendStatus.empty() && !app.busy(JobKind::Send)) app.toast(ToastKind::Warn, app.sendStatus);
             break;
+        case Action::SendFile: chooseFilesToSend(app); break;
         case Action::Discover:
             if (!app.busy(JobKind::Discover)) jobDiscover(app);
             break;

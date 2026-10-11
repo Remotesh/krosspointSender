@@ -16,7 +16,8 @@ It comes in two forms that share one design:
 | Runs | in the browser, static site, no backend | native Windows app (C++, Dear ImGui) |
 | Fetch any URL | only when the site allows cross-origin reads | yes |
 | Wikipedia | yes, through the MediaWiki API | yes |
-| Send over Wi-Fi | from `http://localhost` or through the desktop helper | yes |
+| Send over Wi-Fi | from a copy opened from disk, from `http://localhost`, or through the desktop helper | yes |
+| Send over Bluetooth | Chrome and Edge (Web Bluetooth), needs the CrossPoint ble-transfer firmware build | yes, Windows BLE, finds the reader by scan |
 | Find the reader on the LAN | no, browsers cannot | yes, UDP + HTTP probe |
 | USB folder write | Chrome and Edge | yes |
 | Spider packs | yes | yes |
@@ -60,8 +61,12 @@ your reader. You can confirm this in the browser's network tab.
   with one chapter each, so the reader is not flooded with small files.
 - **Transfer.** CrossPoint HTTP upload (default), WebDAV, CrossPoint
   WebSocket upload with progress, USB folder write, manual download, an
-  OPDS catalog package, and a mock Bluetooth transport for a future
-  K-Reader firmware.
+  OPDS catalog package, and Bluetooth (Web Bluetooth, CrossPoint BLE file
+  transfer protocol; needs the ble-transfer firmware build, see
+  `docs/BLE_PROTOCOL.md`).
+- **Send a file.** Put any file from disk on the SD card over the same
+  transports, for example `firmware.bin` to `/`, then install it on the
+  reader from Settings > System > SD Card Firmware Update.
 - **Device profiles** with a setup wizard: add device, test connection,
   choose the destination folder on the card, send a test EPUB.
 - **Library** of converted articles and packs with transfer history,
@@ -81,6 +86,7 @@ is open.
 | WebDAV | 80 | `PUT` overwrites. |
 | CrossPoint WebSocket | 81 | Streams the file with progress messages. |
 | USB folder | - | Put the reader in USB Drive mode and pick the card. |
+| Bluetooth | - | File Transfer > Receive via Bluetooth, then Connect. Chrome or Edge. About 10 to 50 KB/s. Needs the ble-transfer firmware build. |
 
 The default destination is `/Books/K-rosspoint/`.
 
@@ -180,8 +186,12 @@ Both apps have unit tests, and both were verified end to end:
 
 ## Status
 
-1.0. Both apps are at feature parity. Bluetooth transfer is a mock with a
-documented protocol draft for a future K-Reader firmware.
+1.1. Both apps are at feature parity. Both send over Bluetooth with the
+CrossPoint BLE file transfer protocol (docs/BLE_PROTOCOL.md) and both can
+send any file to the card, including a firmware image for the reader's
+SD Card Firmware Update. Bluetooth needs a CrossPoint build with "Receive
+via Bluetooth", proposed upstream from the `feat/ble-file-transfer`
+branch; a real EPUB transfer to an Xteink X4 Pro has been verified.
 
 ## Credits
 

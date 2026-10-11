@@ -57,8 +57,8 @@ describe('storage', () => {
   it('creates the krosspoint database with all stores', async () => {
     const db = await getDb();
     expect(db.name).toBe('krosspoint');
-    expect(db.version).toBe(2);
-    expect(Array.from(db.objectStoreNames).sort()).toEqual(['articles', 'devices', 'handles', 'packs', 'settings']);
+    expect(db.version).toBe(3);
+    expect(Array.from(db.objectStoreNames).sort()).toEqual(['articles', 'devices', 'handles', 'packs', 'settings', 'transfers']);
   });
 
   it('round-trips an article', async () => {

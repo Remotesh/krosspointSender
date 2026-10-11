@@ -1,5 +1,5 @@
 // Native file dialogs and "open folder".
-// Windows: GetSaveFileNameW, GetOpenFileNameW, SHBrowseForFolderW, ShellExecuteW.
+// Windows: GetSaveFileNameW, GetOpenFileNameW (also multi-select for "send a file"), SHBrowseForFolderW, ShellExecuteW.
 // Other platforms: the export goes to settings.lastExportDir (or
 // <data>/exports). The UI shows the path.
 #include "app/app.h"
@@ -172,6 +172,41 @@ std::optional<std::string> pickFolderDialog(const std::string& title) {
     return narrow(buf);
 }
 
+// GetOpenFileNameW (comdlg32) with OFN_ALLOWMULTISELECT | OFN_EXPLORER.
+// One file: the buffer holds the full path. Several files: the folder,
+// then each file name, NUL-separated, with a double NUL at the end.
+std::vector<std::string> openFilesDialog(const std::string& title, bool* supported) {
+    if (supported) *supported = true;
+    std::vector<wchar_t> buf(32768, L'\0');
+    static const wchar_t filter[] =
+        L"All files (*.*)\0*.*\0Firmware (*.bin)\0*.bin\0Books (*.epub;*.xtc;*.txt;*.pdf)\0*.epub;*.xtc;*.txt;*.pdf\0";
+    std::wstring t = widen(title);
+    OPENFILENAMEW ofn{};
+    ofn.lStructSize = sizeof ofn;
+    ofn.lpstrFilter = filter;
+    ofn.lpstrFile = buf.data();
+    ofn.nMaxFile = static_cast<DWORD>(buf.size());
+    ofn.lpstrTitle = t.c_str();
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+    std::vector<std::string> out;
+    if (!GetOpenFileNameW(&ofn)) return out;
+    const wchar_t* p = buf.data();
+    std::wstring first = p;
+    p += first.size() + 1;
+    if (!*p) {
+        out.push_back(narrow(first));   // one file
+        return out;
+    }
+    while (*p) {
+        std::wstring name = p;
+        std::wstring full = first;
+        if (!full.empty() && full.back() != L'\\') full += L'\\';
+        out.push_back(narrow(full + name));
+        p += name.size() + 1;
+    }
+    return out;
+}
+
 void openFolder(const std::string& path) {
     ShellExecuteW(nullptr, L"open", widen(path).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
@@ -195,6 +230,13 @@ std::optional<std::string> saveFileDialog(App& app, const std::string& defaultNa
 std::optional<std::string> openFileDialog() { return std::nullopt; }
 
 std::optional<std::string> pickFolderDialog(const std::string&) { return std::nullopt; }
+
+// No native dialog here. The caller tells the user to drop the file on the
+// window or to use the CLI (--send).
+std::vector<std::string> openFilesDialog(const std::string&, bool* supported) {
+    if (supported) *supported = false;
+    return {};
+}
 
 std::optional<std::string> openFileDialogFiltered(const std::string&, const std::string&, const std::string&) {
     return std::nullopt;

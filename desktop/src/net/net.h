@@ -2,7 +2,7 @@
 //
 // This module contains:
 // - The transports (WebDAV, CrossPoint HTTP, CrossPoint WebSocket, Folder,
-//   BLE mock). Get one with transport(method).
+//   Bluetooth LE). Get one with transport(method).
 // - UDP discovery of CrossPoint devices.
 // - explain(): plain-word reasons and fallbacks for a failed transfer.
 // - Remote folders: list and create folders on the device (folder browser).
@@ -52,7 +52,7 @@ std::string normalizeFolder(const std::string& folder);               // "/Books
 std::string folderNoTrailingSlash(const std::string& folder);         // "/Books/Inbox", "/" for root
 std::string remoteFilePath(const std::string& folder, const std::string& name);
 
-// CRC32 (IEEE 802.3, poly 0xEDB88320). The future BLE protocol uses it.
+// CRC32 (IEEE 802.3, poly 0xEDB88320). The BLE protocol uses it.
 uint32_t crc32(const std::string& bytes);
 
 // ------------------------------------------------------------- remote folders (remote_folder.cpp)
@@ -100,6 +100,32 @@ std::vector<Discovered> discoverCrossPoint(int timeoutMs = 1500);
 // and raw. Does not set ip. Returns false when the text is not a reply.
 bool parseDiscoveryReply(const std::string& raw, Discovered& out);
 
+// ------------------------------------------------------------- Bluetooth LE (ble_transport.cpp)
+//
+// CrossPoint "Receive via Bluetooth" (docs/BLE_PROTOCOL.md at the repository
+// root). TransferMethod::Ble sends to DeviceProfile.bleAddress; when that is
+// 0 it scans for DeviceProfile.bleName. Windows only; other platforms report
+// Unsupported.
+
+struct BleDiscovered {
+    uint64_t address = 0;   // 48-bit Bluetooth address
+    std::string name;       // advertised local name, for example "CrossPoint-3A7F"
+    int rssi = 0;           // dBm
+};
+
+// True when this build can use Bluetooth LE (the Windows build).
+bool bleSupported();
+// Scans for readers that advertise the CrossPoint file service, strongest
+// signal first. Throws TransferError (Unsupported) when the build has no
+// BLE or the adapter is missing or off.
+std::vector<BleDiscovered> discoverBle(int timeoutMs = 4000, const bool* cancel = nullptr);
+// "AA:BB:CC:DD:EE:FF". 0 gives "".
+std::string formatBleAddress(uint64_t address);
+// Accepts "AA:BB:CC:DD:EE:FF", "aa-bb-...", or 12 hex digits. nullopt when invalid or 0.
+std::optional<uint64_t> parseBleAddress(const std::string& s);
+// The user hint for the reader screen.
+constexpr const char* kBleReaderHint = "On the reader open File Transfer > Receive via Bluetooth";
+
 // ------------------------------------------------------------- explain
 
 struct Explanation {
@@ -108,6 +134,8 @@ struct Explanation {
     std::vector<std::string> fallbacks;
 };
 Explanation explain(const TransferError& e);
+// The same, with Bluetooth reasons and fallbacks when m is TransferMethod::Ble.
+Explanation explain(const TransferError& e, TransferMethod m);
 
 // ------------------------------------------------------------- profiles (devices.json)
 

@@ -114,7 +114,7 @@ TransferResult sendWithProgress(const JobCtx& ctx, const DeviceProfile& p, const
         sh->post([tp](App& app) { app.transfer = tp; });
     };
     ctx.log("Send " + f.name + " (" + humanBytes(f.bytes.size()) + ") to " + p.name + " via " +
-            toString(p.method) + " at " + p.host + ":" + std::to_string(p.port));
+            toString(p.method) + " at " + deviceWhere(p));
     TransferResult res = net::transport(p.method).send(p, f, onProgress, &ctl->cancelPlain);
     if (res.ok) {
         ctx.log("Sent: " + res.remotePath + " (" + humanBytes(res.bytes) + ").");
@@ -131,8 +131,8 @@ TransferResult sendWithProgress(const JobCtx& ctx, const DeviceProfile& p, const
 }
 
 void postSendResult(const JobCtx& ctx, const TransferResult& res, const std::string& name,
-                    const std::string& device) {
-    ctx.post([res, name, device](App& app) {
+                    const std::string& device, TransferMethod method) {
+    ctx.post([res, name, device, method](App& app) {
         if (res.ok) {
             app.transfer.state = TransferState::Complete;
             app.transfer.fraction = 1.0;
@@ -149,7 +149,7 @@ void postSendResult(const JobCtx& ctx, const TransferResult& res, const std::str
             app.sendStatus.clear();
             // The menu bar has no room for the explain block. The toast gets
             // the first reason. The log and the pill tooltip get all of it.
-            net::Explanation ex = net::explain(*app.lastError);
+            net::Explanation ex = net::explain(*app.lastError, method);
             std::string text = ex.title + "\n" + app.lastError->message;
             for (auto& r : ex.reasons) text += "\n- " + r;
             if (!ex.fallbacks.empty()) text += "\nWhat you can do:";
@@ -306,7 +306,7 @@ void jobSend(App& app) {
         f.name = output::makeFilename(a, fmt, rules);
         TransferResult res = sendWithProgress(ctx, p, f);
         saveToLibrary(ctx, a, f, cache ? &imgs : nullptr, makeRecord(a.id, p, f, res));
-        postSendResult(ctx, res, f.name, p.name);
+        postSendResult(ctx, res, f.name, p.name, p.method);
     });
 }
 
@@ -324,7 +324,7 @@ void jobSendFileTo(App& app, const DeviceProfile& p, OutputFile file) {
     app.transfer = TransferProgress{TransferState::Connecting, -1, 0, 0, "Connecting"};
     app.startJob(JobKind::Send, "Send " + file.name, [p, file](JobCtx& ctx) {
         TransferResult res = sendWithProgress(ctx, p, file);
-        postSendResult(ctx, res, file.name, p.name);
+        postSendResult(ctx, res, file.name, p.name, p.method);
     });
 }
 
@@ -347,11 +347,13 @@ void jobFallbackFolder(App& app, const std::string& folder) {
         f.name = output::makeFilename(a, fmt, rules);
         TransferResult res = sendWithProgress(ctx, p, f);
         saveToLibrary(ctx, a, f, nullptr, makeRecord(a.id, p, f, res));
-        postSendResult(ctx, res, f.name, p.name);
+        postSendResult(ctx, res, f.name, p.name, p.method);
     });
 }
 
 std::string testKey(const DeviceProfile& p) {
+    if (p.method == TransferMethod::Ble)
+        return net::formatBleAddress(p.bleAddress) + "/" + p.bleName + ":" + toString(p.method);
     return trim(p.host) + ":" + std::to_string(p.port) + ":" + toString(p.method);
 }
 
@@ -363,8 +365,8 @@ void jobTest(App& app, const DeviceProfile& p, TestTarget target) {
             break;
         case TestTarget::Panel: app.testResult.reset(); break;
     }
-    app.startJob(JobKind::Test, "Test " + p.host, [p, target](JobCtx& ctx) {
-        ctx.log("Test connection: " + toString(p.method) + " " + p.host + ":" + std::to_string(p.port));
+    app.startJob(JobKind::Test, "Test " + deviceWhere(p), [p, target](JobCtx& ctx) {
+        ctx.log("Test connection: " + toString(p.method) + " " + deviceWhere(p));
         ConnectionTestResult r = net::transport(p.method).testConnection(p);
         ctx.log(r.ok ? "Test OK (" + std::to_string(r.latencyMs) + " ms)."
                      : "Test failed: " + (r.error ? r.error->message : std::string("unknown error")));
@@ -397,7 +399,7 @@ void jobConfirmDevice(App& app, const DeviceProfile& draft) {
     app.startJob(JobKind::Send, "Confirm " + p.name, [p](JobCtx& ctx) {
         OutputFile file = output::testEpub();
         TransferResult res = sendWithProgress(ctx, p, file);
-        postSendResult(ctx, res, file.name, p.name);
+        postSendResult(ctx, res, file.name, p.name, p.method);
         if (!res.ok) return;
         // The test file arrived. Save the profile, then set lastConnectedAt.
         DeviceProfile saved;
@@ -413,7 +415,7 @@ void jobConfirmDevice(App& app, const DeviceProfile& draft) {
                 app.dev.problems = {"The file arrived, but the device was not saved: " + problem};
                 return;
             }
-            app.addLog("Device confirmed: " + saved.name + " (" + saved.host + ").");
+            app.addLog("Device confirmed: " + saved.name + " (" + deviceWhere(saved) + ").");
             app.reloadProfiles();
             app.profileId = saved.id;
             app.method = saved.method;
@@ -441,6 +443,37 @@ void jobDiscover(App& app) {
             app.discoverDone = true;
             if (list.empty()) app.toast(ToastKind::Warn, "no device replied to discovery");
             else app.toast(ToastKind::Info, std::to_string(list.size()) + " device(s) found");
+        });
+    });
+}
+
+void jobDiscoverBle(App& app) {
+    app.bleFound.clear();
+    app.bleScanDone = false;
+    app.bleScanError.clear();
+    app.dev.bleSel = -1;
+    app.startJob(JobKind::BleScan, "Scan for Bluetooth readers", [](JobCtx& ctx) {
+        ctx.log("Bluetooth: scanning 4 s for the CrossPoint file service.");
+        std::vector<net::BleDiscovered> list;
+        std::string err;
+        try {
+            list = net::discoverBle(4000, &ctx.ctl->cancelPlain);
+        } catch (const TransferError& e) {
+            err = e.message;
+        } catch (const std::exception& e) {
+            err = e.what();
+        }
+        if (!err.empty()) ctx.log("Bluetooth scan failed: " + err);
+        else ctx.log("Bluetooth: " + std::to_string(list.size()) + " reader(s) found.");
+        for (auto& d : list)
+            ctx.log("  " + d.name + " " + net::formatBleAddress(d.address) + " " + std::to_string(d.rssi) + " dBm");
+        ctx.post([list, err](App& app) {
+            app.bleFound = list;
+            app.bleScanDone = true;
+            app.bleScanError = err;
+            if (!err.empty()) app.toast(ToastKind::Error, "bluetooth: " + err);
+            else if (list.empty()) app.toast(ToastKind::Warn, "no Bluetooth reader found");
+            else app.toast(ToastKind::Info, std::to_string(list.size()) + " Bluetooth reader(s) found");
         });
     });
 }

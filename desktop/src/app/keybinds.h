@@ -18,6 +18,7 @@ enum class Action {
     Paste,
     Export,
     Send,
+    SendFile,
     Discover,
     OpenLibrary,
     OpenSettings,
