@@ -1,5 +1,5 @@
 /**
- * K-rosspointSender shared types.
+ * k-rosspointSender shared types.
  * This file is the contract between modules. Do not change a type here
  * without updating docs/ARCHITECTURE.md and every module that uses it.
  */

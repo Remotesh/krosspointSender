@@ -2,7 +2,7 @@
 /*
  * Build the bookmarklet.
  * Usage: node bookmarklet/build.mjs [appUrl]
- * appUrl is the address of the K-rosspointSender app, for example
+ * appUrl is the address of the k-rosspointSender app, for example
  * https://k-engine.org/misc/krosspoint/ . The default is "./".
  * Output: bookmarklet/bookmarklet.txt (one javascript: URL).
  */

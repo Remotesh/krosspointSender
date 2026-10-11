@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: spider module, link rewriting between pack pages.
+// k-rosspointSender desktop: spider module, link rewriting between pack pages.
 // Port of src/spider/linkRewriter.ts (and limitImages from src/spider/pack.ts).
 #include "spider/internal.h"
 #include "extract/internal.h"

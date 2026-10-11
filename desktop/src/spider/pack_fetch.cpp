@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: spider module, pack creation, page fetch, web spider.
+// k-rosspointSender desktop: spider module, pack creation, page fetch, web spider.
 // Port of src/spider/pack.ts and src/spider/webSpider.ts.
 #include "spider/internal.h"
 #include "extract/internal.h"

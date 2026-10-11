@@ -652,13 +652,13 @@ export async function sendTestEpub(): Promise<OutputFile> {
   const now = new Date().toISOString();
   const article: Article = {
     id: randomUuid(),
-    title: 'K-rosspointSender test',
+    title: 'k-rosspointSender test',
     author: APP_NAME,
     capturedAt: now,
     language: 'en',
     tags: [],
     bodyHtml:
-      '<p>The transfer works. K-rosspointSender sent this book to your reader. ' +
+      '<p>The transfer works. k-rosspointSender sent this book to your reader. ' +
       'You can delete this file now.</p>',
     toc: [],
     images: [],

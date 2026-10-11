@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, junk removal, layout clean-up
+// k-rosspointSender desktop: extract module, junk removal, layout clean-up
 // and the allowlist sanitizer. Port of src/extractors/dom.ts and sanitize.ts.
 #include "extract/internal.h"
 

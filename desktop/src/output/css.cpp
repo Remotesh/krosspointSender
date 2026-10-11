@@ -76,7 +76,7 @@ std::string epubCss(const StyleSettings& style) {
 
     std::string css;
     css.reserve(4096);
-    css += "/* K-rosspointSender stylesheet. Preset: " + toString(style.preset) + ". */\n";
+    css += "/* k-rosspointSender stylesheet. Preset: " + toString(style.preset) + ". */\n";
     css += "html, body {\n  padding: 0;\n}\n";
     css += "body {\n  margin: " + margin + "em;\n  font-family: serif;\n  font-size: " + size +
            "%;\n  line-height: " + lh + ";\n  text-align: " + align + ";\n}\n";

@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, main-content finder.
+// k-rosspointSender desktop: extract module, main-content finder.
 // A small Readability-style scorer: paragraph density, comma count, link
 // density and class/id hints. It picks the best container and adds good
 // siblings. It prefers <article> and <main> when they hold enough text.

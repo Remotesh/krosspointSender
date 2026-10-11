@@ -17,7 +17,7 @@ namespace ks::app {
 namespace {
 
 const char* const kUsage =
-    "K-rosspointSender desktop 0.1\n"
+    "k-rosspointSender desktop 0.1\n"
     "\n"
     "Usage:\n"
     "  krosspoint_sender                      Start the window.\n"

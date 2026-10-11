@@ -1,6 +1,6 @@
-# K-rosspointSender desktop
+# k-rosspointSender desktop
 
-The standalone version of K-rosspointSender. A small native app (C++,
+The standalone version of k-rosspointSender. A small native app (C++,
 Dear ImGui, SDL2, OpenGL). It does what the web app does, without the
 browser limits:
 

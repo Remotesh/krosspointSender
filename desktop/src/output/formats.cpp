@@ -70,7 +70,7 @@ OutputFile buildHtml(const Article& a, const BuildOptions& o) {
     std::string html = "<!DOCTYPE html>\n<html lang=\"" + escapeXml(lang) + "\"><head><meta charset=\"utf-8\"><title>" +
                        escapeXml(title) +
                        "</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-                       "<meta name=\"generator\" content=\"K-rosspointSender\"><style>" +
+                       "<meta name=\"generator\" content=\"k-rosspointSender\"><style>" +
                        escapeStyleEnd(epubCss(o.style) + kScreenCss) + "</style></head>";
     serializeHtml(body, html);
     html += "</html>\n";

@@ -70,9 +70,9 @@ export function buildOpdsCatalog(entries: OpdsEntry[], baseUrl: string): string 
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<feed xmlns="${NS_ATOM}" xmlns:dc="${NS_DC}" xmlns:opds="${NS_OPDS}">`,
     '  <id>urn:krosspoint:catalog</id>',
-    '  <title>K-rosspointSender</title>',
+    '  <title>k-rosspointSender</title>',
     `  <updated>${updated}</updated>`,
-    '  <author><name>K-rosspointSender</name></author>',
+    '  <author><name>k-rosspointSender</name></author>',
     `  <link rel="self" href="${xmlEscape(selfHref)}" type="${ACQ_KIND}"/>`,
     `  <link rel="start" href="${xmlEscape(selfHref)}" type="${ACQ_KIND}"/>`,
   ];

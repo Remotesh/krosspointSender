@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: application state, job queue, UI entry points.
+// k-rosspointSender desktop: application state, job queue, UI entry points.
 // The UI thread owns App. Worker threads never touch App. Workers send
 // results back as UiTask closures. The UI thread runs them in drain().
 #pragma once

@@ -79,7 +79,7 @@ export function epubCss(style: StyleSettings): string {
     : '  -webkit-hyphens: manual;\n  -epub-hyphens: manual;\n  hyphens: manual;\n';
   const align = style.hyphenate ? 'justify' : 'left';
 
-  const css = `/* K-rosspointSender stylesheet. Preset: ${style.preset}. */
+  const css = `/* k-rosspointSender stylesheet. Preset: ${style.preset}. */
 html, body {
   padding: 0;
 }

@@ -1,4 +1,4 @@
-# K-rosspointSender bookmarklet
+# k-rosspointSender bookmarklet
 
 Most sites block the app from reading them (CORS). The bookmarklet runs on
 the article page itself, so the page cannot block it.

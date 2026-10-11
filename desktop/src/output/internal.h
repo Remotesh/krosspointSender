@@ -14,7 +14,7 @@
 
 namespace ks::output::detail {
 
-inline constexpr const char* kAppName = "K-rosspointSender";
+inline constexpr const char* kAppName = "k-rosspointSender";
 inline constexpr const char* kXhtmlNs = "http://www.w3.org/1999/xhtml";
 inline constexpr const char* kEpubNs = "http://www.idpf.org/2007/ops";
 inline constexpr const char* kEpubMime = "application/epub+zip";

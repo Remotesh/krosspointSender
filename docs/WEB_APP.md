@@ -1,6 +1,6 @@
-# K-rosspointSender
+# k-rosspointSender
 
-K-rosspointSender is a local-first web app. It turns web articles, Wikipedia
+k-rosspointSender is a local-first web app. It turns web articles, Wikipedia
 pages, pasted HTML, pasted text, Markdown, TXT files and local HTML files into
 clean EPUB, HTML, TXT, Markdown or ZIP files. The output is tuned for the
 Xteink X4 Pro (480x800 e-ink) running CrossPoint firmware, or a future
@@ -72,13 +72,13 @@ When a fetch fails, the app tells you why and offers these fallbacks:
 ## Bookmarklet fallback
 
 The bookmarklet runs inside the page you are reading. It copies the page
-HTML, URL and title, and hands them to K-rosspointSender. The page HTML never
+HTML, URL and title, and hands them to k-rosspointSender. The page HTML never
 goes anywhere else.
 
 Install:
 
 1. Open the Bookmarklet tab in the Source panel.
-2. Drag the "Send to K-rosspointSender" link to your bookmarks bar.
+2. Drag the "Send to k-rosspointSender" link to your bookmarks bar.
 
 Use:
 

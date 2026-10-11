@@ -132,7 +132,7 @@ function classify(err: unknown, target: URL, page: PageLoc | null, timedOut: boo
 }
 
 const GENERAL_FALLBACKS = [
-  'Use the bookmarklet: open the article in a normal tab, then click the K-rosspointSender bookmark.',
+  'Use the bookmarklet: open the article in a normal tab, then click the k-rosspointSender bookmark.',
   'Open the page, view the source (Ctrl+U), copy all of it, and use "Paste HTML".',
   'Save the page (Ctrl+S, "Webpage, HTML only"), then drop the .html file here.',
   'Select the article text, copy it, and use "Paste text".',

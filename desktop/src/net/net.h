@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: network, devices and storage (namespace ks::net).
+// k-rosspointSender desktop: network, devices and storage (namespace ks::net).
 //
 // This module contains:
 // - The transports (WebDAV, CrossPoint HTTP, CrossPoint WebSocket, Folder,

@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: spider module, internal helpers.
+// k-rosspointSender desktop: spider module, internal helpers.
 // Only files in src/spider include this header.
 // The HTML walks use the libxml2 DOM helpers of the extract module.
 #pragma once

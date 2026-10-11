@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: spider module, HTTP and MediaWiki API.
+// k-rosspointSender desktop: spider module, HTTP and MediaWiki API.
 // Port of wikiApi() in src/spider/wikipediaSpider.ts and of the pacing in
 // src/spider/crawlQueue.ts. The real requests use libcurl through
 // extract::fetchUrlRetry. Tests can replace the HTTP layer (setFetchOverride).

@@ -14,7 +14,7 @@ namespace ks::net::detail {
 
 constexpr long kConnectTimeoutSec = 5;     // connect timeout for every request
 constexpr long kSmallTimeoutSec = 15;      // total timeout for small requests
-constexpr const char* kUserAgent = "K-rosspointSender/0.1";
+constexpr const char* kUserAgent = "k-rosspointSender/0.1";
 
 // A transfer error as a C++ exception. Only used inside src/net.
 struct NetError : std::exception {

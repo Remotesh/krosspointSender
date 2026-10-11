@@ -1,5 +1,5 @@
 /**
- * K-rosspointSender boot. Load settings and device profiles, read a
+ * k-rosspointSender boot. Load settings and device profiles, read a
  * bookmarklet payload from the hash, mount the panels, and wire
  * drag-and-drop, paste and keyboard shortcuts.
  */
@@ -194,6 +194,6 @@ boot().catch((err) => {
   console.error(err);
   const app = document.getElementById('app');
   if (app) {
-    app.textContent = `K-rosspointSender could not start: ${err instanceof Error ? err.message : String(err)}`;
+    app.textContent = `k-rosspointSender could not start: ${err instanceof Error ? err.message : String(err)}`;
   }
 });

@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: shared types.
+// k-rosspointSender desktop: shared types.
 // This header is the contract between modules. Do not change it without
 // updating docs/DESKTOP.md and every module that uses it.
 #pragma once

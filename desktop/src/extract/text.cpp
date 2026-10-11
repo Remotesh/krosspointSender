@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, Markdown and plain text to
+// k-rosspointSender desktop: extract module, Markdown and plain text to
 // XHTML, word count and plain-text output. Port of src/extractors/text.ts
 // and countWords in toc.ts.
 #include "extract/internal.h"

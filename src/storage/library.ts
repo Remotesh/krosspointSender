@@ -84,7 +84,7 @@ export async function exportLibraryJson(): Promise<Blob> {
     return rest;
   });
   const doc = {
-    app: 'K-rosspointSender',
+    app: 'k-rosspointSender',
     format: 'krosspoint-library',
     version: 1,
     exportedAt: new Date().toISOString(),

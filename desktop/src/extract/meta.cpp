@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, page metadata.
+// k-rosspointSender desktop: extract module, page metadata.
 // Reads <meta> tags, <time> elements and JSON-LD. Port of src/extractors/meta.ts.
 #include "extract/internal.h"
 

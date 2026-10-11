@@ -329,7 +329,7 @@ void drawSystem(App& app) {
 
 void drawAbout(App& app) {
     if (!header("About", "version license credits")) return;
-    ImGui::TextColored(theme::Amber, "K-rosspointSender");
+    ImGui::TextColored(theme::Amber, "k-rosspointSender");
     ImGui::SameLine();
     ImGui::TextDisabled("desktop-1.0, imgui %s", IMGUI_VERSION);
     ui::Hint("Articles to EPUB for the Xteink X4 / CrossPoint reader. No telemetry.");

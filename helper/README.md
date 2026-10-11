@@ -1,4 +1,4 @@
-# K-rosspointSender local helper
+# k-rosspointSender local helper
 
 The local helper is a small, optional program. It lets the hosted app
 (https://k-engine.org) send books to your reader on the local network.

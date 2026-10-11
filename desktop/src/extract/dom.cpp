@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, DOM and text helpers on libxml2.
+// k-rosspointSender desktop: extract module, DOM and text helpers on libxml2.
 #include "extract/internal.h"
 
 #include <libxml/HTMLtree.h>

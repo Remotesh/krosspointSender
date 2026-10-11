@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module (public API).
+// k-rosspointSender desktop: extract module (public API).
 // This module turns raw input (URL fetch, HTML, Markdown, text, bookmarklet
 // payload) into a clean Article. The web app (src/extractors/*.ts) is the
 // reference behaviour. See docs/DESKTOP.md, section "extract/".
@@ -36,7 +36,7 @@ struct FetchResult {
     std::string error;         // plain-word problem text when ok is false
 };
 
-// libcurl GET. Follows redirects. User agent "K-rosspointSender/1.0".
+// libcurl GET. Follows redirects. User agent "k-rosspointSender/1.0".
 // `cancelled` is polled during the transfer. Never throws.
 FetchResult fetchUrl(const std::string& url, const std::function<bool()>* cancelled = nullptr, int timeoutSec = 20);
 

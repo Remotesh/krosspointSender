@@ -1,9 +1,9 @@
-# K-rosspointSender
+# k-rosspointSender
 
 Turn the web into clean little e-ink books and send them straight to a
 CrossPoint reader.
 
-K-rosspointSender takes a web article, a Wikipedia page, pasted HTML or
+k-rosspointSender takes a web article, a Wikipedia page, pasted HTML or
 text, a Markdown or TXT file, or a whole "spider pack" of linked Wikipedia
 articles. It cleans the content, builds an EPUB tuned for the Xteink X4 Pro
 (480 x 800 e-ink) running [CrossPoint](https://github.com/crosspoint-reader/crosspoint-reader),

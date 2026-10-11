@@ -55,7 +55,7 @@ export function buildHtml(article: Article, opts: BuildOptions): OutputFile {
   head.appendChild(vp);
   const gen = doc.createElement('meta');
   gen.setAttribute('name', 'generator');
-  gen.setAttribute('content', 'K-rosspointSender');
+  gen.setAttribute('content', 'k-rosspointSender');
   head.appendChild(gen);
   const style = doc.createElement('style');
   // A "</style" inside custom CSS would end the element. Escape it.

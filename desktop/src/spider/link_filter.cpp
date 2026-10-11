@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: spider module, link rules and slugs.
+// k-rosspointSender desktop: spider module, link rules and slugs.
 // Port of src/spider/linkFilter.ts and src/spider/slug.ts.
 #include "spider/internal.h"
 #include "extract/internal.h"

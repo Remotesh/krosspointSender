@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: spider module (Spider Pack mode), public API.
+// k-rosspointSender desktop: spider module (Spider Pack mode), public API.
 // Port of the web src/spider/*.ts. See docs/DESKTOP.md, section
 // "Addendum 2026-10-10: web parity", part "spider/".
 //

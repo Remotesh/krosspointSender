@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, internal helpers.
+// k-rosspointSender desktop: extract module, internal helpers.
 // Not part of the public API. Only files in src/extract include this header.
 #pragma once
 

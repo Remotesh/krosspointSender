@@ -1,5 +1,5 @@
 /**
- * IndexedDB access for K-rosspointSender.
+ * IndexedDB access for k-rosspointSender.
  * Database "krosspoint", version 2.
  * Stores: articles, devices, settings, handles, packs.
  * Version 2 adds the "packs" store (key id, index updatedAt).

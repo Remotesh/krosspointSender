@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: spider module, Wikipedia link scan.
+// k-rosspointSender desktop: spider module, Wikipedia link scan.
 // Port of src/spider/wikipediaSpider.ts.
 #include "spider/internal.h"
 #include "extract/internal.h"

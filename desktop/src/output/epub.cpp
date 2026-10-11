@@ -673,12 +673,12 @@ OutputFile buildBundleEpub(const std::vector<Article>& articles, const std::stri
 OutputFile testEpub() {
     Article a;
     a.id = newUuid();
-    a.title = "K-rosspointSender test";
+    a.title = "k-rosspointSender test";
     a.author = kAppName;
     a.capturedAt = nowIso();
     a.language = "en";
     a.bodyHtml =
-        "<p>The transfer works. K-rosspointSender sent this book to your reader. "
+        "<p>The transfer works. k-rosspointSender sent this book to your reader. "
         "You can delete this file now.</p>";
     a.wordCount = 16;
     a.inputKind = InputKind::Text;

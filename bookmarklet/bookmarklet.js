@@ -1,5 +1,5 @@
 /*
- * K-rosspointSender bookmarklet (readable source).
+ * k-rosspointSender bookmarklet (readable source).
  * build.mjs makes the javascript: URL from this file.
  * Rules for this file: no line comments inside the code, and no "//" in strings.
  * The minifier keeps strings, but it removes block comments.
@@ -59,11 +59,11 @@
     return;
   }
   var done = function () {
-    alert('K-rosspointSender: the page is too big for a link. The page data is on your clipboard. Open K-rosspointSender, select the Bookmarklet tab, and paste it.');
+    alert('k-rosspointSender: the page is too big for a link. The page data is on your clipboard. Open k-rosspointSender, select the Bookmarklet tab, and paste it.');
     window.open(APP, '_blank');
   };
   var fail = function () {
-    alert('K-rosspointSender: the page is too big, and the clipboard is not available. Save the page (Ctrl+S) and upload the .html file instead.');
+    alert('k-rosspointSender: the page is too big, and the clipboard is not available. Save the page (Ctrl+S) and upload the .html file instead.');
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(json).then(done, fail);

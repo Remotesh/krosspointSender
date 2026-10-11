@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, extractArticle and the shared
+// k-rosspointSender desktop: extract module, extractArticle and the shared
 // last step (TOC ids, image list, word count). Port of
 // src/extractors/article.ts, finish.ts, toc.ts and bookmarklet.ts.
 #include "extract/internal.h"

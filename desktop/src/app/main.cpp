@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: entry point. SDL2 + OpenGL3 + Dear ImGui boot,
+// k-rosspointSender desktop: entry point. SDL2 + OpenGL3 + Dear ImGui boot,
 // the lazy event loop, shortcuts, drop events, and the CLI switch.
 // Ported from weatherDesktop (MIT, Cody Savage): the lazy render loop,
 // the DPI hint and the debounced window geometry save.
@@ -132,7 +132,7 @@ int runGui() {
         y = g.y;
     }
     auto wflags = static_cast<SDL_WindowFlags>(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* win = SDL_CreateWindow("K-rosspointSender", x, y, g.w, g.h, wflags);
+    SDL_Window* win = SDL_CreateWindow("k-rosspointSender", x, y, g.w, g.h, wflags);
     if (!win) {
         std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         SDL_Quit();

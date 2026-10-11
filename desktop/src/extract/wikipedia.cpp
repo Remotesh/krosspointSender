@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, Wikipedia clean-up.
+// k-rosspointSender desktop: extract module, Wikipedia clean-up.
 // It works on the desktop page, the mobile page and the action=parse output.
 // Port of src/extractors/wikipedia.ts.
 #include "extract/internal.h"

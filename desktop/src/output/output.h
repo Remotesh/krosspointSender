@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: output module (EPUB, HTML, TXT, Markdown, ZIP).
+// k-rosspointSender desktop: output module (EPUB, HTML, TXT, Markdown, ZIP).
 // This is a port of the web app (src/epub/*.ts, src/converters/*.ts).
 // The EPUB has the same structure as the web EPUB.
 #pragma once

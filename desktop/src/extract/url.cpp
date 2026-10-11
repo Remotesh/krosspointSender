@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, URL helpers and input-kind
+// k-rosspointSender desktop: extract module, URL helpers and input-kind
 // detection. Port of src/extractors/url.ts and parseWikipediaUrl in fetch.ts.
 #include "extract/internal.h"
 

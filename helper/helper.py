@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""K-rosspointSender local helper.
+"""k-rosspointSender local helper.
 
 The hosted app runs on https. The reader speaks plain http on the LAN.
 Browsers block that as mixed content. This helper runs on your computer,
@@ -434,7 +434,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="K-rosspointSender local helper")
+    ap = argparse.ArgumentParser(description="k-rosspointSender local helper")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"listen port (default {DEFAULT_PORT})")
     ap.add_argument(
         "--allow-origin",
@@ -448,7 +448,7 @@ def main(argv: list[str] | None = None) -> int:
 
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     server.daemon_threads = True
-    print(f"K-rosspointSender helper {VERSION} listens on http://127.0.0.1:{args.port}")
+    print(f"k-rosspointSender helper {VERSION} listens on http://127.0.0.1:{args.port}")
     print("Press Ctrl+C to stop.")
     try:
         server.serve_forever()

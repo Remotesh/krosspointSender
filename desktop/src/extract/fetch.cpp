@@ -1,4 +1,4 @@
-// K-rosspointSender desktop: extract module, network fetch with libcurl.
+// k-rosspointSender desktop: extract module, network fetch with libcurl.
 // Port of src/extractors/fetch.ts. The desktop has no CORS limit, so a
 // plain GET reads any page.
 #include "extract/internal.h"
@@ -21,7 +21,7 @@ using namespace detail;
 
 namespace {
 
-const char* kUserAgent = "K-rosspointSender/1.0";
+const char* kUserAgent = "k-rosspointSender/1.0";
 const size_t kMaxBody = 64u * 1024u * 1024u;   // 64 MiB
 
 void globalInit() {

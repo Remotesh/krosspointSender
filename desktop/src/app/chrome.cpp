@@ -210,7 +210,7 @@ void drawToasts(App& app) {
 
 void drawMenuBar(App& app) {
     if (!ImGui::BeginMainMenuBar()) return;
-    ImGui::TextColored(theme::Amber, "K-rosspointSender");
+    ImGui::TextColored(theme::Amber, "k-rosspointSender");
     ImGui::TextDisabled("|");
     if (ImGui::BeginMenu("file")) {
         if (ImGui::MenuItem("paste", shortcutLabel(app, Action::Paste))) pasteFromClipboard(app);
