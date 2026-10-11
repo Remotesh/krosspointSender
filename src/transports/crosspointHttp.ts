@@ -38,6 +38,28 @@ interface CrossPointFileEntry {
 
 const EXISTS_RE = /already exists/i;
 
+/**
+ * Reads the JSON body of GET /api/status. A JSON value that is not an object
+ * gives {}. A body that is not JSON throws a 'device' TransferError.
+ * testConnection and the reader discovery (src/discovery) both use it.
+ */
+export async function readStatusInfo(res: { json(): Promise<unknown> }): Promise<Record<string, unknown>> {
+  try {
+    const data = await res.json();
+    return data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : {};
+  } catch (err) {
+    throw new TransferError('device', 'The device answered, but /api/status did not return JSON. Is this a CrossPoint device?', err);
+  }
+}
+
+/**
+ * True when /api/status info looks like CrossPoint: it has "version" and
+ * "mode" ("AP" or "STA"). The desktop discovery uses the same test.
+ */
+export function isCrossPointStatus(info: Record<string, unknown>): boolean {
+  return typeof info.version === 'string' && info.version !== '' && typeof info.mode === 'string';
+}
+
 export class CrossPointHttpTransport implements TransportAdapter {
   readonly method = 'crosspoint-http' as const;
 
@@ -56,13 +78,7 @@ export class CrossPointHttpTransport implements TransportAdapter {
     try {
       const res = await fetchWithTimeout(`${baseUrl(profile)}/api/status`, { method: 'GET', host: profile.host });
       if (!res.ok) throw httpError(res.status, 'The status request');
-      let info: Record<string, unknown> = {};
-      try {
-        const data = await res.json();
-        if (data && typeof data === 'object') info = data as Record<string, unknown>;
-      } catch {
-        throw new TransferError('device', 'The device answered, but /api/status did not return JSON. Is this a CrossPoint device?');
-      }
+      const info = await readStatusInfo(res);
       return { ok: true, latencyMs: Date.now() - t0, info };
     } catch (err) {
       return { ok: false, latencyMs: Date.now() - t0, error: toTransferError(err, profile.host) };

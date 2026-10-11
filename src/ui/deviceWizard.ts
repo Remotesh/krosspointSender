@@ -12,7 +12,8 @@ import { getTransport, listTransports, onBleDeviceChosen } from '../transports';
 import { renderFolderBrowser } from './folderBrowser';
 import { defaultProfile, deleteProfile, listProfiles, saveProfile, validateProfile } from '../deviceProfiles';
 import { sendTestEpub } from '../epub';
-import { createDrawer, errorMessage, field, h, replace, select, type Drawer } from './dom';
+import { createDrawer, errorMessage, field, h, replace, select, uid, type Drawer } from './dom';
+import { createFindReaderBox, type FindReaderBox } from './findReaderBox';
 import { asTransferError, persistSettings, sendFile } from './actions';
 import { METHODS, renderExplain, testButtonLabel } from './devicePanel';
 import { store } from './state';
@@ -36,7 +37,15 @@ export interface DeviceWizard extends Drawer {
 
 export function createDeviceWizard(): DeviceWizard {
   const st = store();
+  /** The "Find reader" search of the host step. Stopped on step change and close. */
+  let finder: FindReaderBox | null = null;
   const drawer = createDrawer('Devices');
+  // Stop a running "Find reader" search when the drawer closes.
+  const closeDrawer = drawer.close.bind(drawer);
+  drawer.close = () => {
+    finder?.cancel();
+    closeDrawer();
+  };
   let step = 0;
   let draft: Draft = defaultProfile('crosspoint');
   // Keep the draft in step with the reader chosen in the Bluetooth chooser,
@@ -107,7 +116,23 @@ export function createDeviceWizard(): DeviceWizard {
         replace(limitsHost, limitsBox());
       },
     );
-    const host = h('input', { type: 'text', value: draft.host, placeholder: 'crosspoint.local or 192.168.x.x' });
+    const host = h('input', { type: 'text', value: draft.host, placeholder: 'crosspoint.local or 192.168.x.x', id: uid('f') });
+    finder = createFindReaderBox({
+      profileHosts: () => st.get().profiles.map((p) => p.host).filter(Boolean),
+      onPick: (r) => {
+        host.value = r.host;
+        if (!name.value.trim() && r.name) name.value = r.name;
+        toast(`Host set to ${r.host}.`, 'ok');
+      },
+    });
+    const hostField = h(
+      'div',
+      { class: 'field' },
+      h('label', { for: host.id }, 'Host'),
+      h('div', { class: 'host-row' }, host, finder.button),
+      h('small', { class: 'hint' }, 'IP or name. Hotspot mode uses 192.168.4.1. Find reader searches the network (helper, crosspoint.local, subnet sweep).'),
+      finder.panel,
+    );
     const port = h('input', { type: 'number', min: 1, max: 65535, value: String(draft.port) });
     const folder = h('input', { type: 'text', value: draft.targetFolder });
     const user = h('input', { type: 'text', value: draft.username ?? '', autocomplete: 'off' });
@@ -171,7 +196,7 @@ export function createDeviceWizard(): DeviceWizard {
       h('p', { class: 'hint' }, 'On the X4 Pro open File Transfer. The screen shows the IP address. Use it as the host. For Bluetooth no host is needed.'),
       field('Name', name),
       field('Firmware', firmware),
-      field('Host', host, 'IP or name. Hotspot mode uses 192.168.4.1.'),
+      hostField,
       field('Port', port, 'CrossPoint uses 80 (HTTP, WebDAV) and 81 (WebSocket).'),
       field('Target folder', folder, 'Default /Books/K-rosspoint/. You can browse the device in step 3. A missing folder is created on send.'),
       field('Username (optional)', user),
@@ -297,6 +322,8 @@ export function createDeviceWizard(): DeviceWizard {
   }
 
   function go(n: number): void {
+    finder?.cancel();
+    finder = null;
     step = Math.max(0, Math.min(STEPS.length - 1, n));
     const names = stepNames(draft.method);
     const steps = h(

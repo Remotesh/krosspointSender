@@ -18,7 +18,7 @@ It comes in two forms that share one design:
 | Wikipedia | yes, through the MediaWiki API | yes |
 | Send over Wi-Fi | from a copy opened from disk, from `http://localhost`, or through the desktop helper | yes |
 | Send over Bluetooth | Chrome and Edge (Web Bluetooth), needs the CrossPoint ble-transfer firmware build | yes, Windows BLE, finds the reader by scan |
-| Find the reader on the LAN | no, browsers cannot | yes, UDP + HTTP probe |
+| Find the reader on the LAN | yes, from the offline copy or localhost: helper, crosspoint.local, subnet sweep (the https page can use only the helper) | yes, UDP + HTTP probe |
 | USB folder write | Chrome and Edge | yes |
 | Spider packs | yes | yes |
 | Library, device profiles, settings | IndexedDB | files in your user folder |

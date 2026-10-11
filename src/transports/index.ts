@@ -51,7 +51,7 @@ export function listTransports(): TransportAdapter[] {
 
 export { explainBlock, FALLBACKS } from './explain';
 export { WebDavTransport, webdavTransport } from './webdav';
-export { CrossPointHttpTransport, crosspointHttpTransport } from './crosspointHttp';
+export { CrossPointHttpTransport, crosspointHttpTransport, readStatusInfo, isCrossPointStatus } from './crosspointHttp';
 export { CrossPointWsTransport, crosspointWsTransport, WS_PORT, WS_CHUNK_SIZE, WS_HIGH_WATER, wsUrl } from './crosspointWs';
 export {
   UsbTransport,

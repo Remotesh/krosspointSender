@@ -437,3 +437,15 @@ progress { width: 100%; height: 6px; accent-color: var(--amber); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Find reader (device wizard host step) */
+.host-row { display: flex; gap: 0.4rem; align-items: center; }
+.host-row > input { flex: 1; min-width: 0; }
+.find-reader { border: 1px dashed var(--fg-dim); border-radius: 4px; padding: 0.4rem 0.6rem; margin-top: 0.3rem; }
+.find-reader .subnet-row { font-size: 0.8rem; color: var(--fg-dim); font-family: var(--mono); }
+.find-reader .subnet-input { width: 9em; }
+.find-reader .btn-row { align-items: center; margin: 0.3rem 0; }
+.find-progress { margin: 0; }
+.find-results { margin: 0.2rem 0; padding-left: 1.1rem; }
+.find-results li { margin: 0.15rem 0; }
+.find-notes { margin: 0.2rem 0; padding-left: 1.1rem; }

@@ -559,3 +559,21 @@ epubcheck.
 - Storage: DB version 3 adds a `transfers` store (`storage/transfers.ts`)
   for sends that have no library article. The upgrade only adds the store.
   `clearLibrary()` leaves it alone.
+- Find reader: `discovery/findReader.ts` exports a cancellable
+  `findReader(opts, onProgress)` that returns
+  `{readers: {host, name?, version?, source: 'helper'|'mdns'|'sweep', ip?}[], cancelled, notes, swept}`,
+  deduped by host and mDNS ip. Stages: helper `/status` (3 s) then
+  `/discover` (6 s; the desktop app has it, `helper.py` does not);
+  `http://crosspoint.local/api/status` (2 s); /24 sweep of
+  `/api/status`, 700 ms per probe, at most 32 in flight, prefixes = user,
+  saved-profile /24s (private only), then 192.168.0/1/4, 10.0.0,
+  192.168.2/50. A sweep hit must pass `isCrossPointStatus` (`version` +
+  `mode`) after `readStatusInfo`, the parser now shared with
+  `crosspointHttp.testConnection`. On an https page that is not localhost
+  the mDNS and sweep stages are skipped with a note that points to "Save an
+  offline copy"; the helper is still tried. Without `thorough`, the sweep
+  runs only when nothing was found yet (a typed subnet always runs) and stops
+  after the first prefix with a hit. UI: `ui/findReaderBox.ts` (button,
+  subnet input, progress, Cancel, result list) in the wizard host step; the
+  search stops on step change and drawer close. The Device panel has no host
+  field (Edit opens the wizard), so it has no own button.

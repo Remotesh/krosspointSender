@@ -203,6 +203,33 @@ fails. Use one of these:
   origin the LAN upload works, because CrossPoint sends CORS headers.
 - Run the local helper app (below).
 
+### Finding the reader
+
+The host step of Devices > Add Device has a **Find reader** button next to
+the host field. It looks for a CrossPoint reader that shows the File
+Transfer screen and fills the host when you click a result (and the device
+name, when the name field is empty). Typing the host by hand works as
+before. A browser cannot send UDP, cannot ask mDNS, and cannot learn its own
+LAN address, so the search runs these stages in order:
+
+| Stage | What it does | Limits |
+|---|---|---|
+| 1. Desktop helper | When the desktop app answers at the Helper URL (`http://127.0.0.1:8134`), the page calls its `GET /discover`. That is the desktop UDP broadcast and probe, so it finds a reader on any subnet. 3 s for the helper to answer, 6 s for its discovery. | Needs the desktop app to run. The Python helper has no `/discover`. Some browsers block a public https page from calling 127.0.0.1; then the stage fails quietly. |
+| 2. `crosspoint.local` | `GET http://crosspoint.local/api/status`, 2 s. The operating system resolves the `.local` name (Windows 10 and later, macOS, most Linux). | Fails when the OS or the network does not do mDNS, or when the reader is in hotspot mode without a name. |
+| 3. Subnet sweep | `GET http://a.b.c.x/api/status` for x = 1 to 254, 32 requests at a time, 700 ms each (about 6 s per subnet). Order: the subnet you type (for example `192.168.1`), the subnets of your saved devices, then 192.168.0, 192.168.1, 192.168.4 (the reader's hotspot), 10.0.0, 192.168.2, 192.168.50. A hit counts only when the answer looks like CrossPoint (`version` and `mode`). | It cannot know your real subnet. If your network uses another range, type it. Private ranges only. |
+
+By default the sweep runs only when stages 1 and 2 found nothing, and it
+stops after the first subnet with a hit. A subnet that you type is always
+swept. Cancel stops the search at once and keeps the readers found so far.
+
+**It works only where Wi-Fi sends work.** Stages 2 and 3 are plain http to
+the LAN, the same as a Wi-Fi send. On the hosted https page they are
+skipped (mixed content), and the app tells you to use "Save an offline
+copy". From the offline copy (file://) or from `http://localhost` all three
+stages run. The helper stage runs everywhere it can reach 127.0.0.1.
+Chrome may ask once for permission to access devices on the local network;
+allow it. Bluetooth needs no search: the browser chooser is the scan.
+
 ### Over USB
 
 CrossPoint on the X4 Pro has a USB Drive mode (Home > File Transfer > USB
